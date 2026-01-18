@@ -1,0 +1,18 @@
+[project]
+name = "customer-purchas-propensity-prediction"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dvc>=3.66.1",
+    "dvc-s3>=3.3.0",
+    "feast[redis]>=0.59.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "pandas>=2.3.3",
+    "pip>=25.3",
+    "pyarrow>=22.0.0",
+    "pyspark>=4.1.1",
+    "seaborn>=0.13.2",
+]
