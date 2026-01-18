@@ -1,0 +1,31 @@
+
+k
+K
+user%Unique identifier for a user/customer"user_idJpropensity_features
+¥´ËÀÃ¤¥¥´ËÀÃ¤¥
+k
+K
+productUnique identifier for a product"
+product_idJpropensity_features
+¥´Ëèƒ§¥¥´Ëèƒ§¥
+J
+*
+__dummy"
+__dummy_idJpropensity_features
+¥´Ëˆ©¥¥´Ëğ«¥1"$78048fa3-fd80-4d5a-8123-24e91c8fc714*é§´Ë¸øºÎ2˜
+à
+propensity_featurespropensity_featuresuserproduct"
+category_code_level1"
+category_code_level2"	
+brand"
+event_weekday"	
+price"
+activity_count2€†°–:Œevent_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Customer_Purchas_Propensity_Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v1.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_source’¥´Ë‚×"¥´ËøŠ•¥@b
+user_idb
+
+product_id3
+¥´ËĞ¯›¥é§´Ëà˜Î
+·¡„µĞ©µ§´Ëb¢event_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Customer_Purchas_Propensity_Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v1.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_sourceªpropensity_features’¥´Ë‚×"¥´ËøŠ•¥Š5
+
+propensity_features
+¥´Ë¨Èº¥´Ë¨Èº

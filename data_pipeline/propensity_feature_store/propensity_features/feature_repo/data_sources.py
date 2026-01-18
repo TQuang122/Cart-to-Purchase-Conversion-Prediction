@@ -11,7 +11,7 @@ from feast import FileSource
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Build absolute path to data file
-_DATA_PATH = os.path.join(_CURRENT_DIR, "data", "processed_propensity_data.parquet")
+_DATA_PATH = os.path.join(_CURRENT_DIR, "data", "processed_purchase_propensity_data_v1.parquet")
 
 propensity_data_source = FileSource(
     name="propensity_data_source",
