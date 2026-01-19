@@ -28,6 +28,7 @@ FEATURES = [
     "propensity_features:event_weekday",
     "propensity_features:price",
     "propensity_features:activity_count",
+    "propensity_features:is_purchased"
 ]
 
 

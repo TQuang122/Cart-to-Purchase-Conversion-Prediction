@@ -24,8 +24,13 @@ def prepare_data_for_feast(
     df["created_timestamp"] = datetime.now()
 
     # 3) Ensure types (Feast join keys nên ổn định)
-    df["user_id"] = pd.to_numeric(df["user_id"], errors="coerce").astype("Int64")
-    df["product_id"] = pd.to_numeric(df["product_id"], errors="coerce").astype("Int64")
+    # Use int64 (not Int64) for compatibility with Feast online store
+    df["user_id"] = (
+        pd.to_numeric(df["user_id"], errors="coerce").fillna(0).astype("int64")
+    )
+    df["product_id"] = (
+        pd.to_numeric(df["product_id"], errors="coerce").fillna(0).astype("int64")
+    )
 
     # Basic cleanup for categoricals
     df["brand"] = df["brand"].fillna("unknown").astype(str).str.lower()
@@ -92,7 +97,7 @@ if __name__ == "__main__":
     #     os.path.join(_CURRENT_DIR, "..", "..", "..", "..")
     # )
 
-        # This file lives at: <project_root>/data_pipeline/propensity_feature_store/propensity_features/feature_repo
+    # This file lives at: <project_root>/data_pipeline/propensity_feature_store/propensity_features/feature_repo
     # So project root is 4 levels up from feature_repo
     _PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, "..", "..", "..", ".."))
 
@@ -106,7 +111,7 @@ if __name__ == "__main__":
         _CURRENT_DIR, "data", "processed_propensity_data.parquet"
     )
 
-        # Helpful debug output + clearer error
+    # Helpful debug output + clearer error
     print(f"Project root: {_PROJECT_ROOT}")
     print(f"Data pipeline dir: {_DATA_PIPELINE_DIR}")
     print(f"Input CSV: {input_file}")
@@ -119,4 +124,3 @@ if __name__ == "__main__":
         )
 
     prepare_data_for_feast(input_file)
- 

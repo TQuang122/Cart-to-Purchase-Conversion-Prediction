@@ -16,6 +16,7 @@ cart_context_features = FeatureView(
         Field(name="event_weekday", dtype=Int64),
         Field(name="price", dtype=Float32),
         Field(name="activity_count", dtype=Int64),
+        Field(name="is_purchased", dtype=Int64)
     ],
     source=propensity_data_source,
     online=True,
