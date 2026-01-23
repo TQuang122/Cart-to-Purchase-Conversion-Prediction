@@ -6,7 +6,7 @@
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5.svg)](https://kubernetes.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 
-A **production-ready MLOps system** for customer cart-to-purchase conversion prediction, demonstrating best practices in machine learning operations including data versioning, feature stores, experiment tracking, model serving, and infrastructure automation.
+We formulate cart-to-purchase conversion as a conditional prediction problem, where the target is defined only after an add-to-cart event has occurred.
 
 ## 📖 Table of Contents
 

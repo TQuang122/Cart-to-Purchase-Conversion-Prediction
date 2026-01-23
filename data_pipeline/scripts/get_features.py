@@ -20,15 +20,79 @@ _REPO_PATH = os.path.join(
     "feature_repo",
 )
 
-# Features from propensity_features FeatureView
+# Features from propensity_features FeatureView (V2 - 26 features + target)
 FEATURES = [
+    # ===== Original V1 features =====
     "propensity_features:category_code_level1",
     "propensity_features:category_code_level2",
     "propensity_features:brand",
     "propensity_features:event_weekday",
     "propensity_features:price",
     "propensity_features:activity_count",
-    "propensity_features:is_purchased"
+    # ===== NEW V2: Hour feature =====
+    "propensity_features:event_hour",
+    # ===== NEW V2: User aggregate features =====
+    "propensity_features:user_total_events",
+    "propensity_features:user_total_views",
+    "propensity_features:user_total_carts",
+    "propensity_features:user_total_purchases",
+    "propensity_features:user_view_to_cart_rate",
+    "propensity_features:user_cart_to_purchase_rate",
+    "propensity_features:user_avg_purchase_price",
+    "propensity_features:user_unique_products",
+    "propensity_features:user_unique_categories",
+    # ===== NEW V2: Product aggregate features =====
+    "propensity_features:product_total_events",
+    "propensity_features:product_total_views",
+    "propensity_features:product_total_carts",
+    "propensity_features:product_total_purchases",
+    "propensity_features:product_view_to_cart_rate",
+    "propensity_features:product_cart_to_purchase_rate",
+    "propensity_features:product_unique_buyers",
+    # ===== NEW V2: Brand & Price comparison features =====
+    "propensity_features:brand_purchase_rate",
+    "propensity_features:price_vs_user_avg",
+    "propensity_features:price_vs_category_avg",
+    # ===== Target (optional, for validation) =====
+    "propensity_features:is_purchased",
+]
+
+# Feature names without prefix (for model input)
+FEATURE_NAMES = [
+    f.split(":")[1] for f in FEATURES if f != "propensity_features:is_purchased"
+]
+
+# Numerical and categorical feature lists (matching model training)
+NUMERICAL_FEATURES = [
+    "price",
+    "activity_count",
+    "event_weekday",
+    "event_hour",
+    "user_total_events",
+    "user_total_views",
+    "user_total_carts",
+    "user_total_purchases",
+    "user_view_to_cart_rate",
+    "user_cart_to_purchase_rate",
+    "user_avg_purchase_price",
+    "user_unique_products",
+    "user_unique_categories",
+    "product_total_events",
+    "product_total_views",
+    "product_total_carts",
+    "product_total_purchases",
+    "product_view_to_cart_rate",
+    "product_cart_to_purchase_rate",
+    "product_unique_buyers",
+    "brand_purchase_rate",
+    "price_vs_user_avg",
+    "price_vs_category_avg",
+]
+
+CATEGORICAL_FEATURES = [
+    "brand",
+    "category_code_level1",
+    "category_code_level2",
 ]
 
 
@@ -147,8 +211,8 @@ if __name__ == "__main__":
     print("\nExample 2: Single user-product pair...")
     try:
         df_single = get_propensity_features(
-            user_id=515903856,
-            product_id=2601552,
+            user_id=94566147,
+            product_id=1005007,
         )
         print(df_single)
     except Exception as e:

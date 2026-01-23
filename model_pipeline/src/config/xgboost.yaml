@@ -1,0 +1,69 @@
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "test_cart_to_purchase_prediction_xgboost_v1.1"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://localhost:5000"
+  tags:
+    task: "cart-to-purchase"
+    purpose: "test"
+    model_family: "xgboost"
+
+model:
+  model_type: "xgboost"
+  name: "xgboost_ctp"
+  version: "1.0.0"
+  type: "classifier"
+  description: "XGBoost model for cart-to-purchase prediction"
+  train_test_split: 0.2
+  random_state: 42
+
+  parameters:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.1
+    min_child_weight: 1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    objective: "binary:logistic"
+    eval_metric: "logloss"
+    n_jobs: -1
+    random_state: 42
+    use_label_encoder: false
+
+evaluation:
+  thresholds:
+    accuracy_score: 0.8
+    f1_score: 0.8
+
+# Feature Configuration
+features:
+  target_column: "is_purchased"
+  # Numerical features (23 features)
+  training_features:
+    - "price"
+    - "activity_count"
+    - "event_weekday"
+    - "event_hour"
+    - "user_total_events"
+    - "user_total_views"
+    - "user_total_carts"
+    - "user_total_purchases"
+    - "user_view_to_cart_rate"
+    - "user_cart_to_purchase_rate"
+    - "user_avg_purchase_price"
+    - "user_unique_products"
+    - "user_unique_categories"
+    - "product_total_events"
+    - "product_total_views"
+    - "product_total_carts"
+    - "product_total_purchases"
+    - "product_view_to_cart_rate"
+    - "product_cart_to_purchase_rate"
+    - "product_unique_buyers"
+    - "brand_purchase_rate"
+    - "price_vs_user_avg"
+    - "price_vs_category_avg"
+  # Categorical features (3 features)
+    - "brand"
+    - "category_code_level1"
+    - "category_code_level2"
