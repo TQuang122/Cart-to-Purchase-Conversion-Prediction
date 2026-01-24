@@ -1,2 +1,4 @@
 /processed_purchase_propensity_data_v1.parquet
 /processed_purchase_propensity_data_v2.parquet
+/train.parquet
+/test.parquet
