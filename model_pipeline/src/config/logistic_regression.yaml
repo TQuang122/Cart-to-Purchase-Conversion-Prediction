@@ -1,0 +1,72 @@
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "test_cart_to_purchase_prediction_logistic_v1.1"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://localhost:5000"
+  tags:
+    task: "cart-to-purchase"
+    purpose: "test"
+    model_family: "logistic_regression"
+
+model:
+  model_type: "logistic_regression"
+  name: "logistic_regression_ctp"
+  version: "1.0.0"
+  type: "classifier" 
+  description: "Logistic Regression model for cart-to-purchase prediction"
+  train_test_split: 0.2
+  random_state: 42
+
+  parameters:
+    penalty: "l2"  
+    tol: 0.0001  
+    C: 1.0  
+    fit_intercept: true
+    intercept_scaling: 1
+    class_weight: "balanced"  
+    random_state: 42
+    solver: "lbfgs"  # lbfgs, liblinear, newton-cg, newton-cholesky, sag, saga
+    max_iter: 1000
+    multi_class: "auto"  # auto, ovr, multinomial
+    verbose: 1
+    warm_start: false
+    n_jobs: -1
+    l1_ratio: null  
+
+evaluation:
+  thresholds:
+    accuracy_score: 0.8
+    f1_score: 0.8
+
+# Feature Configuration
+features:
+  target_column: "is_purchased"
+  # Numerical features (23 features)
+  training_features:
+    - "price"
+    - "activity_count"
+    - "event_weekday"
+    - "event_hour"
+    - "user_total_events"
+    - "user_total_views"
+    - "user_total_carts"
+    - "user_total_purchases"
+    - "user_view_to_cart_rate"
+    - "user_cart_to_purchase_rate"
+    - "user_avg_purchase_price"
+    - "user_unique_products"
+    - "user_unique_categories"
+    - "product_total_events"
+    - "product_total_views"
+    - "product_total_carts"
+    - "product_total_purchases"
+    - "product_view_to_cart_rate"
+    - "product_cart_to_purchase_rate"
+    - "product_unique_buyers"
+    - "brand_purchase_rate"
+    - "price_vs_user_avg"
+    - "price_vs_category_avg"
+  # Categorical features (3 features)
+    - "brand"
+    - "category_code_level1"
+    - "category_code_level2"

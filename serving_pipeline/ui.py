@@ -4,9 +4,11 @@ import random
 import time
 import google.generativeai as genai
 import os
-# pip install google-generativeai
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.ticker as mtick
 
-csv_state = gr.State(None)
+# pip install google-generativeai
 initial_message = [
     {
         "role": "assistant",
@@ -14,7 +16,7 @@ initial_message = [
     }
 ]
 # tạm thời chưa bảo mật API key
-GEMINI_API_KEY = "AIzaSyCmhc3oknQWSzp7aD35h65QE7exTL40Z3I"
+GEMINI_API_KEY = "AIzaSyA_uU1iq27B8WLu6wUaGGPpzJJNdLY6fyc"
 genai.configure(
     api_key=GEMINI_API_KEY
 )
@@ -53,12 +55,12 @@ def predict_single(user_id, product_id, price, brand, activity_count, weekday):
 # ---2.Logic tab Upload CSV---
 def preview_csv(file_obj):
     if file_obj is None:
-        return pd.DataFrame()
+        return None, pd.DataFrame()
     try:
         df = pd.read_csv(file_obj.name)
-        return df.head(10)
+        return df, df.head(10)
     except Exception as e:
-        return pd.DataFrame({"Lỗi!!!": [str(e)]})
+        return None, pd.DataFrame({"Lỗi!!!": [str(e)]})
     
 
 # --- 3. LOGIC CHATBOT ---
@@ -122,8 +124,206 @@ def chat_interface(message, history):
 
 
 # --- 4. logic dashboard --- 
-def show_image():
-    return '"C:/Users/HP/Downloads/download.png"'
+
+def plot_price_distribution(df):
+    if df is None or df.empty:
+        return None
+    col_name = next((col for col in df.columns if col.lower() == 'price'), None)
+    
+    if col_name is None:
+        fig = plt.figure(figsize=(8, 2))
+        plt.text(0.5, 0.5, "Không tìm thấy cột 'price' trong dữ liệu", 
+                 ha='center', va='center', fontsize=12, color='red')
+        plt.axis('off')
+        return fig
+
+    data = df[col_name].dropna()
+    fig = plt.figure(figsize=(10, 6))
+    sns.set_style('whitegrid') 
+
+    sns.histplot(
+        data, 
+        kde=True, 
+        color='#3498db', 
+        edgecolor='black', 
+        bins=30,           
+        alpha=0.7,         
+        line_kws={'linewidth': 2} 
+    )
+
+    mean_val = data.mean()
+    median_val = data.median()
+    
+    plt.axvline(mean_val, color='red', linestyle='--', linewidth=1.5, label=f'Mean: ${mean_val:,.2f}')
+    plt.axvline(median_val, color='green', linestyle='-', linewidth=1.5, label=f'Median: ${median_val:,.2f}')
+    plt.title(f"Phân phối giá sản phẩm ({col_name})", fontsize=15, fontweight='bold', pad=20)
+    plt.xlabel("Price ($)", fontsize=12)
+    plt.ylabel("Frequency (Tần suất)", fontsize=12)
+    plt.legend(loc='upper right')
+    plt.tight_layout()
+    
+    return fig
+
+def plot_funnel_analysis(df):
+
+    if df is None or df.empty: return None
+    if 'event_type' not in df.columns: return None
+
+    funnel_data = df['event_type'].value_counts().sort_values(ascending=False)
+    
+    total_events = funnel_data.sum() 
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.set_style('whitegrid')
+
+    plot = sns.barplot(
+        x=funnel_data.values, 
+        y=funnel_data.index, 
+        palette='viridis', 
+        edgecolor='black', 
+        alpha=0.8
+    )
+
+    for i, (value, name) in enumerate(zip(funnel_data.values, funnel_data.index)):
+        percent = (value / total_events) * 100
+        label_text = f"{value:,.0f} ({percent:.1f}%)"
+        
+        
+        ax.text(value + (value * 0.01), i, label_text, 
+                va='center', fontweight='bold', color='#333333')
+    plt.title('Conversion Funnel (Phễu chuyển đổi)', fontsize=15, fontweight='bold', pad=20)
+    plt.xlabel('Number of Events', fontsize=12)
+    plt.ylabel('') 
+    plt.xlim(0, funnel_data.max() * 1.15)
+    plt.tight_layout()
+    return fig
+
+def plot_hourly_conversion(df):
+    if df is None or df.empty: return None
+    
+    if 'event_time' not in df.columns: return None
+    
+    plot_df = df.copy()
+    
+    try:
+        plot_df['event_time'] = pd.to_datetime(plot_df['event_time'])
+        plot_df['hour'] = plot_df['event_time'].dt.hour
+    except Exception:
+        return None 
+
+    if 'is_purchased' not in plot_df.columns and 'event_type' in plot_df.columns:
+        plot_df['is_purchased'] = (plot_df['event_type'] == 'purchase').astype(int)
+        
+    hour_analysis = plot_df.groupby('hour')['is_purchased'].mean() * 100
+
+    if hour_analysis.empty: return None
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.set_style("whitegrid")
+
+    ax.plot(hour_analysis.index, hour_analysis.values, 
+            color='#008080', marker='o', linewidth=2, markersize=6, label='Conversion Rate')
+
+    ax.fill_between(hour_analysis.index, hour_analysis.values, color='#008080', alpha=0.1)
+
+    peak_hour = hour_analysis.idxmax()
+    peak_rate = hour_analysis.max()
+    
+    ax.plot(peak_hour, peak_rate, marker='o', color='#ff6b6b', markersize=12, markeredgewidth=2, fillstyle='none')
+    
+    ax.annotate(f'Giờ vàng: {peak_hour}h\n({peak_rate:.1f}%)', 
+                xy=(peak_hour, peak_rate), 
+                xytext=(peak_hour, peak_rate + (peak_rate * 0.1)),
+                arrowprops=dict(facecolor='#333', shrink=0.05, width=2, headwidth=8),
+                fontsize=11, fontweight='bold', color='#c0392b', ha='center')
+
+    ax.set_title('Xác suất mua hàng theo khung giờ (Hourly Purchase Probability)', 
+                 fontsize=14, fontweight='bold', pad=15)
+    ax.set_xlabel('Giờ trong ngày (0h - 23h)', fontsize=11)
+    ax.set_ylabel('Tỷ lệ chuyển đổi (%)', fontsize=11)
+    
+    ax.set_xticks(range(0, 24, 2)) 
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter())
+    plt.tight_layout()
+    return fig
+
+def plot_cart_abandonment_latency(df):
+    if df is None or df.empty: return None
+    required_cols = ['event_time', 'event_type', 'user_session', 'product_id']
+    if not all(col in df.columns for col in required_cols): return None
+
+    try:
+        process_df = df.copy()
+        process_df['event_time'] = pd.to_datetime(process_df['event_time'])
+
+        carts = process_df[process_df['event_type'] == 'cart'][['user_session', 'product_id', 'event_time']]
+        purchases = process_df[process_df['event_type'] == 'purchase'][['user_session', 'product_id', 'event_time']]
+
+        if carts.empty or purchases.empty: return None
+
+        latency_df = pd.merge(carts, purchases, on=['user_session', 'product_id'], suffixes=('_cart', '_purchase'))
+        
+        latency_df['latency_seconds'] = (latency_df['event_time_purchase'] - latency_df['event_time_cart']).dt.total_seconds()
+        
+        valid_latency = latency_df[(latency_df['latency_seconds'] >= 0) & (latency_df['latency_seconds'] <= 3600)]
+        
+        if valid_latency.empty: return None
+
+        minutes_data = valid_latency['latency_seconds'] / 60
+
+    except Exception as e:
+        print(f"Lỗi xử lý latency: {e}")
+        return None
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.set_style("whitegrid")
+
+    sns.histplot(
+        minutes_data, 
+        bins=50, 
+        kde=True, 
+        color='#FF7F50', # Coral Color
+        edgecolor='white',
+        alpha=0.7,
+        line_kws={'linewidth': 2, 'color': '#FF4500'} 
+    )
+
+    median_val = minutes_data.median()
+    mean_val = minutes_data.mean()
+
+    ax.axvline(median_val, color='green', linestyle='--', linewidth=2, label=f'Median: {median_val:.1f} min')
+    
+    ax.axvline(mean_val, color='blue', linestyle=':', linewidth=2, label=f'Mean: {mean_val:.1f} min')
+
+    ax.set_title('Thời gian quyết định mua hàng (Trong 60 phút đầu)', fontsize=14, fontweight='bold', pad=15)
+    ax.set_xlabel('Số phút sau khi thêm vào giỏ (Minutes)', fontsize=11)
+    ax.set_ylabel('Số lượng đơn hàng (Volume)', fontsize=11)
+    
+    ax.legend(loc='upper right', frameon=True, shadow=True)
+    
+    fast_buy_count = (minutes_data <= 5).sum()
+    total_count = len(minutes_data)
+    percent_fast = (fast_buy_count / total_count) * 100
+    
+    stats_text = f"💡 Insight:\n{percent_fast:.1f}% khách chốt đơn\ntrong 5 phút đầu!"
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    ax.text(0.95, 0.60, stats_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', horizontalalignment='right', bbox=props)
+
+    plt.tight_layout()
+    return fig
+
+
+def update_full_dashboard(df):
+    # Trả về theo thứ tự của outputs bên dưới
+    return (
+        plot_funnel_analysis(df),          # 1. Phễu
+        plot_price_distribution(df),       # 2. Giá
+        plot_hourly_conversion(df),        # 3. Giờ vàng
+        plot_cart_abandonment_latency(df)  # 4. Tốc độ mua
+    )
+
+
 
 # --- 5. UI ---
 
@@ -779,6 +979,43 @@ CSS
     box-shadow: 0 0 30px rgba(168, 85, 247, 0.8) !important; /* Phát sáng mạnh hơn và rộng hơn */
 }
 
+/* Khung chứa (Container) - Hiệu ứng kính mờ */
+.bi-header-container {
+    background: rgba(255, 255, 255, 0.04); /* Nền siêu mờ */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Viền mỏng */
+    border-radius: 20px; /* Bo góc tròn trịa */
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); /* Bóng đổ tạo chiều sâu */
+    backdrop-filter: blur(8px); /* Làm mờ hậu cảnh sau kính */
+    margin-bottom: 20px;
+}
+
+/* Tiêu đề chính - Chữ Gradient chuyển màu */
+.bi-title {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    
+    /* Tạo màu Gradient Tím -> Xanh */
+    background: linear-gradient(to right, #c084fc, #6366f1, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Phụ đề - Màu xám sáng */
+.bi-subtitle {
+    font-size: 1.1rem;
+    color: #cbd5e1;
+    font-weight: 300;
+    line-height: 1.6;
+}
+.bi-subtitle i {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
 """
 
 
@@ -787,6 +1024,7 @@ with gr.Blocks(
     theme=theme,
     css=custom_css
 ) as ui:
+    store_df = gr.State()
 
     gr.Markdown("# E-commerce AI Prediction & Assistant", elem_id="main_header")
 
@@ -861,7 +1099,7 @@ with gr.Blocks(
             btn_preview.click(
                 preview_csv,
                 inputs=file_in,
-                outputs=preview_df
+                outputs=[store_df, preview_df]
             )
 
             
@@ -949,27 +1187,75 @@ with gr.Blocks(
         # ===TAB 4 ===
         with gr.Tab("Dashboard"):
             with gr.Row():
-                with gr.Column():
-                    img1 = gr.Image(label="Image 1")
-                    btn1 = gr.Button("Load")
-                    btn1.click(show_image, outputs=img1)
-
-                with gr.Column():
-                    img2 = gr.Image(label="Image 2")
-                    btn2 = gr.Button("Load")
-                    btn2.click(show_image, outputs=img2)
-
-            with gr.Row():
-                with gr.Column():
-                    img3 = gr.Image(label="Image 3")
-                    btn3 = gr.Button("Load")
-                    btn3.click(show_image, outputs=img3)
-
-                with gr.Column():
-                    img4 = gr.Image(label="Image 4")
-                    btn4 = gr.Button("Load")
-                    btn4.click(show_image, outputs=img4)
+                gr.HTML(
+                    """
+                        <div style="
+                            display: flex; 
+                            flex-direction: column; 
+                            align-items: center; 
+                            justify-content: center; 
+                            text-align: center;
+                            background: rgba(255, 255, 255, 0.04); 
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 20px; 
+                            padding: 15px; 
+                            margin-bottom: 20px;
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                            backdrop-filter: blur(10px);
+                        ">
+                            <div style="
+                                font-size: 2.0rem; 
+                                font-weight: 900; 
+                                text-transform: uppercase;
+                                margin-bottom: 10px;
+                                background: linear-gradient(90deg, #a855f7, #3b82f6, #06b6d4);
+                                -webkit-background-clip: text;
+                                -webkit-text-fill-color: transparent;
+                                font-family: sans-serif;
+                            ">
+                                Business Intelligence Hub
+                            </div>
+                            
+                            <div style="
+                                font-size: 1.2rem; 
+                                color: #cbd5e1; 
+                                font-weight: 300; 
+                                max-width: 600px;
+                                line-height: 1.2;
+                            ">
+                                Centralized data analytics system & Key performance indicator visualization.<br>
+                                <span style="color: #94a3b8; font-size: 1rem; font-style: italic;">
+                                    (Click the button below to update to the latest report)
+                                </span>
+                            </div>
+                        </div>
+                    """
+                )
             
+            # Nút bấm to, màu nổi bật (variant='primary') để kích hoạt
+            with gr.Row():
+                btn_analyze = gr.Button("Dashboard Update & Insight Analysis", variant="primary", scale=3)
+            
+            # HÀNG 1: TỔNG QUAN HIỆU SUẤT
+            with gr.Row():
+                with gr.Column(scale=1): # Cột trái
+                    plot_funnel = gr.Plot(label="Conversion Funnel")
+                
+                with gr.Column(scale=1): # Cột phải
+                    plot_price = gr.Plot(label="Price Distribution")
 
+            # HÀNG 2: PHÂN TÍCH HÀNH VI
+            with gr.Row():
+                with gr.Column(scale=1): # Cột trái
+                    plot_hourly = gr.Plot(label="Hourly Patterns")
+                
+                with gr.Column(scale=1): # Cột phải
+                    plot_latency = gr.Plot(label="Purchase Latency")
+
+            btn_analyze.click(
+                fn=update_full_dashboard,   
+                inputs=store_df,       
+                outputs=[plot_funnel, plot_price, plot_hourly, plot_latency] 
+            )
 if __name__ == "__main__":
-    ui.launch(debug=True)
+    ui.launch(share=True)

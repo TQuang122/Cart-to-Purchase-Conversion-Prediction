@@ -1,20 +1,20 @@
 
-j
+k
+K
+user%Unique identifier for a user/customer"user_idJpropensity_features
+¥´ËÀÃ¤¥üÇËè‰Œ×
+k
 K
 productUnique identifier for a product"
-product_idJpropensity_features
-¥´Ëèƒ§¥ˆ‚½Ëˆ¤r
-j
-K
-user%Unique identifier for a user/customer"user_idJpropensity_features
-¥´ËÀÃ¤¥ˆ‚½Ëğœ§r
-I
+product_idJpropensity_features
+¥´Ëèƒ§¥üÇË ˜×
+J
 *
 __dummy"
-__dummy_idJpropensity_features
-¥´Ëˆ©¥ˆ‚½Ëˆ†¬r1"$1eea41e0-aff0-4116-a08d-d911ee26869e*¹‚½ËØç¹-2
+__dummy_idJpropensity_features
+¥´Ëˆ©¥üÇË˜è‘×1"$435052d6-3188-4e68-955e-07fdc8427b0f*ÿüÇË°Ë_2µ
 
-ı
+ÿ
 propensity_featurespropensity_featuresuserproduct"
 category_code_level1"
 category_code_level2"	
@@ -43,17 +43,19 @@ event_hour"
 brand_purchase_rate"
 price_vs_user_avg"
 price_vs_category_avg"
-is_purchased2€†°–:Ševent_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Customer_Purchas_Propensity_Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v2.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_source’ˆ‚½Ë€ºök"ˆ‚½ËĞ Èq@b
+is_purchased2€†°–:Œevent_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v2.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_source’¥´Ë‚×"üÇËèĞ¡Ö@b
 user_idb
 
-product_idŒ
-¥´ËĞ¯›¥¹‚½Ëèë¨-
+product_id°
+¥´ËĞ¯›¥ÿüÇË˜¯¼U
 ·¡„µĞ©µ§´Ë
 µ§´ËÔ•¶Ë
 Ô•¶ËĞ–¶Ë
 €ëíí€¨‘ï
 €ëíí€¨‘ï
-Ğ–¶Ë±‚½Ëb¢event_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Customer_Purchas_Propensity_Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v2.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_sourceªpropensity_features’¥´Ë‚×"Ö£¹Ë âî½Š4
+Ğ–¶Ë±‚½Ë
+±‚½Ë¤üÇË
+€®Êìÿ„Œïb¢event_timestampZŠ‡/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/processed_purchase_propensity_data_v2.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢propensity_data_sourceªpropensity_features’¥´Ë‚×"üÇËèĞ¡ÖŠ5
 
-propensity_features
-¥´Ë¨Èºˆ‚½ËĞòm
+propensity_features
+¥´Ë¨ÈºüÇË€îôÒ
