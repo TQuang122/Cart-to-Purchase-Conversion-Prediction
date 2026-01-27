@@ -1,4 +1,131 @@
 custom_css = """
+/* ===== GLOBAL BACKGROUND (BRIGHTER PURPLE) ===== */
+body, .gradio-container {
+    background:
+        radial-gradient(circle at top, #4c1d95 0%, #1e1b4b 35%, #020617 75%),
+        linear-gradient(135deg, #312e81 0%, #020617 100%) !important;
+    color: #f1f5f9 !important;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ===== TAB HOME ACTIVE ===== */
+button[aria-selected="true"] {
+    color: #c084fc !important;
+    border-bottom: 2px solid #c084fc !important;
+}
+
+/* ===== HOME WRAPPER ===== */
+#home-wrapper {
+    max-width: 1180px;
+    margin: auto;
+    padding: 64px 24px;
+}
+
+/* ===== TITLE ===== */
+#home-title {
+    font-size: 46px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.6px;
+    background: linear-gradient(
+        90deg,
+        #a5b4fc,
+        #60a5fa,
+        #34d399
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+}
+
+/* ===== MAIN DESCRIPTION (THIS PROJECT IMPLEMENTS...) ===== */
+#home-desc {
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1.7;
+    max-width: 950px;
+    margin-top: 8px;
+    background: linear-gradient(
+        90deg,
+        #e0e7ff,
+        #bae6fd
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ===== GRID ===== */
+.pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    margin-top: 52px;
+}
+
+/* ===== PIPELINE CARD ===== */
+.pipeline-card {
+    background: linear-gradient(
+        165deg,
+        rgba(76, 29, 149, 0.75),
+        rgba(15, 23, 42, 0.95)
+    );
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow:
+        0 12px 35px rgba(0,0,0,0.45),
+        inset 0 0 0 1px rgba(192,132,252,0.18);
+    transition: all 0.3s ease;
+}
+
+.pipeline-card:hover {
+    transform: translateY(-6px);
+    box-shadow:
+        0 20px 50px rgba(0,0,0,0.65),
+        inset 0 0 0 1px rgba(192,132,252,0.35);
+}
+
+/* ===== PIPELINE TITLE ===== */
+.pipeline-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 21px;
+    font-weight: 800;
+    background: linear-gradient(
+        90deg,
+        #c4b5fd,
+        #93c5fd
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+}
+
+/* ===== PIPELINE TEXT ===== */
+.pipeline-card p {
+    font-size: 15.5px;
+    line-height: 1.7;
+    opacity: 0.95;
+}
+
+/* ===== FOOTER TEXT (DESIGNED FOR...) ===== */
+#home-wrapper > p {
+    margin-top: 38px;
+    font-size: 17px;
+    font-weight: 600;
+    background: linear-gradient(
+        90deg,
+        #ddd6fe,
+        #a5b4fc
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+
+
+
+##################################
 /* === 1. TỔNG QUAN NỀN & FONT === */
 body, .gradio-container {
     background: linear-gradient(135deg, #0f172a 0%, #110e1b 100%) !important;
@@ -687,6 +814,7 @@ CSS
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.7) !important;
     border-color: #a78bfa !important;
 }
+
 
 """
 

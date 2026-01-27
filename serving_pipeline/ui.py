@@ -13,11 +13,6 @@ from upload_csv_func import preview_csv
 from predict_func import predict_single
 
 
-
-
-
-
-
 # --- UI ---
 
 
@@ -41,11 +36,70 @@ with gr.Blocks(
     css=custom_css
 ) as ui:
     store_df = gr.State()
-
-    gr.Markdown("# E-commerce AI Prediction & Assistant", elem_id="main_header")
-
+    gr.Markdown("# 🛒 E-commerce AI Prediction & Assistant", elem_id="main_header")
     with gr.Tabs(elem_classes="custom-nav"):
+        # === TAB OVERVIEW ===
+        with gr.Tab("Overview"):
+            gr.HTML(
+            """"
+                <div id="home-wrapper">
 
+                <div id="home-header">
+                    <div id="home-title">
+                    Customer Churn Prediction – End-to-End MLOps Pipeline
+                    </div>
+                    <div id="home-desc">
+                    This project implements a complete <b>MLOps pipeline</b> for customer churn prediction,
+                    covering the entire machine learning lifecycle from data ingestion to production deployment.
+                    </div>
+                </div>
+
+                <div class="pipeline-grid">
+
+                    <div class="pipeline-card">
+                    <div class="pipeline-title">📦 Data Pipeline</div>
+                    <p>
+                        Version-controlled data with <b>DVC</b>, feature engineering using <b>Feast</b>,
+                        and Redis-backed online feature serving.
+                    </p>
+                    </div>
+
+                    <div class="pipeline-card">
+                    <div class="pipeline-title">🤖 Model Pipeline</div>
+                    <p>
+                        <b>XGBoost</b> training with <b>MLflow</b> experiment tracking,
+                        model registry, and automated evaluation.
+                    </p>
+                    </div>
+
+                    <div class="pipeline-card">
+                    <div class="pipeline-title">🚀 Serving Pipeline</div>
+                    <p>
+                        <b>FastAPI</b>-based prediction service integrated with
+                        <b>Gradio UI</b> and monitoring components.
+                    </p>
+                    </div>
+
+                    <div class="pipeline-card">
+                    <div class="pipeline-title">🛠 Infrastructure</div>
+                    <p>
+                        Kubernetes and Docker orchestration for <b>PostgreSQL</b>, <b>MinIO</b>,
+                        <b>MLflow</b>, <b>Kafka</b>, <b>Airflow</b>, and monitoring stack.
+                    </p>
+                    </div>
+
+                </div>
+
+                <p style="margin-top:28px; opacity:0.8;">
+                    Designed for <b>scalability</b>, <b>reproducibility</b>, and
+                    <b>production-grade deployment</b>.
+                </p>
+
+                </div>
+                """          
+                ,
+                elem_id="home"
+                )
         # === TAB 1 ===
         with gr.Tab("Single Prediction"):
             with gr.Row():

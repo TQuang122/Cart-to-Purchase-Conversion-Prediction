@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 import gradio as gr
+import random 
 # --- 1. LOGIC DỰ ĐOÁN ---
 
 def predict_single(event_time, product_id, category_id, category_code, brand, price, user_id, user_session):
     # --- ĐOẠN NÀY LÀ LOGIC GIẢ LẬP CỦA BẠN ---
     # Ví dụ: trả về xác suất 85% và trạng thái "Mua"
-    probability = 85.5 
+    probability = random.randint(40, 60) 
     label = "purchase" if probability > 50 else "not purchase"
 
 
