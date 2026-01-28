@@ -8,6 +8,12 @@ body, .gradio-container {
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
+#main_header h1 {
+    font-size: 58px !important;
+    line-height: 1.2;
+}
+
+
 /* ===== TAB HOME ACTIVE ===== */
 button[aria-selected="true"] {
     color: #c084fc !important;
@@ -736,6 +742,7 @@ CSS
 
 /* CSS cho tiêu đề chính "E-commerce AI Prediction & Assistant" */
 
+
 #main_header h1 {
     /* 1. Viền màu tím (sử dụng mã màu tím từ các nút bấm của bạn) */
     border: 2px solid #7c3aed !important;
@@ -758,6 +765,7 @@ CSS
 
     /* 7. Hiệu ứng chuyển đổi mượt mà (cho hover) */
     transition: all 0.3s ease-in-out;
+
 }
 
 /* (Tùy chọn) Hiệu ứng khi di chuột vào (hover) để sáng mạnh hơn */
