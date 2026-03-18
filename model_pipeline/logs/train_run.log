@@ -1,0 +1,58 @@
+/home/airflow/.local/lib/python3.11/site-packages/mlflow/pyfunc/utils/data_validation.py:186: UserWarning: [33mAdd type hints to the `predict` method to enable data validation and automatic signature inference during model logging. Check https://mlflow.org/docs/latest/model/python_model.html#type-hint-usage-in-pythonmodel for more details.[0m
+  color_warning(
+2026-03-15 08:59:56.987 | INFO     | __main__:main:67 - Loading configuration...
+2026-03-15 08:59:56.989 | INFO     | __main__:main:85 - Experiment name: test_cart_to_purchase_prediction_lightgbm_v1.0
+2026-03-15 08:59:56.989 | INFO     | __main__:main:87 - Initializing MLflow experiment tracker...
+2026-03-15 08:59:57.012 | INFO     | src.mlflow_utils.experiment_tracker:_get_or_create_experiment:51 - Using existing experiment: self.experiment_name='test_cart_to_purchase_prediction_lightgbm_v1.0' | experiment_id='4'
+2026-03-15 08:59:57.012 | INFO     | src.mlflow_utils.experiment_tracker:__init__:36 - Initialized experiment tracker: test_cart_to_purchase_prediction_lightgbm_v1.0
+2026-03-15 08:59:57.012 | INFO     | src.mlflow_utils.experiment_tracker:__init__:37 - Tracking URI: http://mlflow_server:5000
+2026-03-15 08:59:57.012 | INFO     | src.mlflow_utils.experiment_tracker:__init__:38 - Experiment ID: 4
+2026-03-15 08:59:57.012 | INFO     | __main__:main:94 - Loading training data from args.training_data_path='/opt/airflow/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/train.parquet'
+2026-03-15 08:59:57.450 | INFO     | __main__:main:107 - Loaded 2343998 samples with 31 features
+2026-03-15 08:59:58.111 | INFO     | __main__:main:124 - Target encoding column: category_code_level1
+2026-03-15 08:59:58.270 | INFO     | __main__:main:124 - Target encoding column: category_code_level2
+2026-03-15 08:59:58.399 | INFO     | __main__:main:124 - Target encoding column: brand
+2026/03/15 08:59:58 WARNING mlflow.utils.git_utils: Failed to import Git (the Git executable is probably not on your PATH), so Git SHA is not available. Error: Failed to initialize: Bad git executable.
+The git executable must be specified in one of the following ways:
+    - be included in your $PATH
+    - be set via $GIT_PYTHON_GIT_EXECUTABLE
+    - explicitly set via git.refresh(<full-path-to-git-executable>)
+
+All git commands will error until this is rectified.
+
+This initial message can be silenced or aggravated in the future by setting the
+$GIT_PYTHON_REFRESH environment variable. Use one of the following values:
+    - quiet|q|silence|s|silent|none|n|0: for no message or exception
+    - warn|w|warning|log|l|1: for a warning message (logging level CRITICAL, displayed by default)
+    - error|e|exception|raise|r|2: for a raised exception
+
+Example:
+    export GIT_PYTHON_REFRESH=quiet
+
+2026-03-15 08:59:58.738 | INFO     | src.mlflow_utils.experiment_tracker:start_run:81 - Started MLflow run: 67519e6c67664347aa70f59df2ec90e7
+2026-03-15 08:59:58.738 | INFO     | src.mlflow_utils.experiment_tracker:start_run:83 - Run name: lightgbm_airflow_manual__2026-03-15T08_59_51_00_00
+2026-03-15 08:59:58.738 | INFO     | __main__:main:152 - Started MLflow run: 67519e6c67664347aa70f59df2ec90e7
+2026-03-15 08:59:58.738 | INFO     | src.model.xgboost_trainer:prepare_data:169 - Preparing training data for lightgbm...
+2026-03-15 09:00:00.267 | INFO     | src.model.xgboost_trainer:prepare_data:182 - Training set: (1875198, 26), Test set: (468800, 26)
+2026-03-15 09:00:00.271 | INFO     | src.model.xgboost_trainer:prepare_data:183 - Class distribution - Train: {0: 1388907, 1: 486291}
+2026-03-15 09:00:00.273 | INFO     | src.model.xgboost_trainer:prepare_data:184 - Class distribution - Test: {0: 347227, 1: 121573}
+2026-03-15 09:00:00.277 | INFO     | __main__:main:163 - Training with params: {'n_estimators': 500, 'max_depth': 8, 'learning_rate': 0.05, 'num_leaves': 64, 'min_child_samples': 20, 'subsample': 0.85, 'subsample_freq': 1, 'colsample_bytree': 0.75, 'objective': 'binary', 'metric': 'binary_logloss', 'reg_alpha': 0.1, 'reg_lambda': 1.5, 'is_unbalance': True, 'n_jobs': -1, 'random_state': 42, 'verbose': -1}
+2026-03-15 09:00:00.277 | INFO     | src.model.xgboost_trainer:train:209 - Starting lightgbm model training...
+2026-03-15 09:00:23.176 | INFO     | src.model.xgboost_trainer:train:230 - Training complete.
+2026-03-15 09:00:23.176 | INFO     | src.model.xgboost_trainer:train:231 - Train accuracy: 0.8253
+2026-03-15 09:00:23.176 | INFO     | src.model.xgboost_trainer:train:232 - Test accuracy: 0.8239
+2026-03-15 09:00:23.682 | INFO     | src.model.xgboost_trainer:_log_feature_importance:268 - Feature importance logged
+/home/airflow/.local/lib/python3.11/site-packages/mlflow/types/utils.py:452: UserWarning: Hint: Inferred schema contains integer column(s). Integer columns in Python cannot represent missing values. If your input data contains missing values at inference time, it will be encoded as floats and will cause a schema enforcement error. The best way to avoid this problem is to infer the model schema based on a realistic data sample (training dataset) that includes missing values. Alternatively, you can declare integer columns as doubles (float64) whenever these columns may have missing values. See `Handling Integers With Missing Values <https://www.mlflow.org/docs/latest/models.html#handling-integers-with-missing-values>`_ for more details.
+  warnings.warn(
+2026-03-15 09:00:23.764 | INFO     | src.model.xgboost_trainer:save_model:293 - SRC_PATH=PosixPath('/opt/airflow/model_pipeline')
+2026-03-15 09:00:23.764 | INFO     | src.model.xgboost_trainer:save_model:295 - Saving lightgbm model as 'lightgbm_ctp'...
+2026/03/15 09:00:23 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+2026/03/15 09:00:24 WARNING mlflow.pyfunc: Passing a Python object as `python_model` causes it to be serialized using CloudPickle, it requires exercising caution as Python object serialization mechanisms may execute arbitrary code during deserialization.Consider using a file path (str or Path) instead. See https://mlflow.org/docs/latest/ml/model/models-from-code/ for details.
+2026/03/15 09:00:24 INFO mlflow.pyfunc: Validating input example against model signature
+2026/03/15 09:00:27 WARNING mlflow.utils.environment: Encountered an unexpected error while inferring pip requirements (model URI: /tmp/tmpcxlvlqv_/model, flavor: python_function). Fall back to return ['cloudpickle==3.1.1']. Set logging level to DEBUG to see the full traceback. 
+2026-03-15 09:01:31.517 | INFO     | __main__:main:199 - ============================================================
+2026-03-15 09:01:31.517 | INFO     | __main__:main:200 - TRAINING COMPLETE
+2026-03-15 09:01:31.517 | INFO     | __main__:main:201 - Run ID: 67519e6c67664347aa70f59df2ec90e7
+2026-03-15 09:01:31.517 | INFO     | src.mlflow_utils.experiment_tracker:start_run:87 - Completed MLflow run: 67519e6c67664347aa70f59df2ec90e7
+🏃 View run lightgbm_airflow_manual__2026-03-15T08_59_51_00_00 at: http://mlflow_server:5000/#/experiments/4/runs/67519e6c67664347aa70f59df2ec90e7
+🧪 View experiment at: http://mlflow_server:5000/#/experiments/4

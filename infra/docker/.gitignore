@@ -1,0 +1,4 @@
+
+# ignore large datasets
+model_pipeline/src/data/train.csv
+model_pipeline/src/data/test.csv

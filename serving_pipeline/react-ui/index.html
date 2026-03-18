@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" style="color-scheme: dark light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-c2p.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" id="theme-color-meta" />
+    <script>
+      (function () {
+        const themeMode = localStorage.getItem('c2p_theme_mode_v1') || 'system'
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        const resolvedDark = themeMode === 'dark' || (themeMode === 'system' && prefersDark)
+        document.documentElement.classList.toggle('dark', resolvedDark)
+        document.documentElement.style.colorScheme = resolvedDark ? 'dark' : 'light'
+        const themeColor = document.querySelector('meta[name="theme-color"]')
+        if (themeColor) {
+          themeColor.setAttribute('content', resolvedDark ? '#0f172a' : '#f8fafc')
+        }
+      })()
+    </script>
+    <title>Cart-to-Purchase Prediction</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

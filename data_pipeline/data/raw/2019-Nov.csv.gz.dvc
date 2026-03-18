@@ -1,0 +1,5 @@
+outs:
+- md5: b9b05e530d333b448fbb99520768f6fc
+  size: 2890421023
+  hash: md5
+  path: 2019-Nov.csv.gz

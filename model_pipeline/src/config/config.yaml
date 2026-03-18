@@ -1,0 +1,116 @@
+# # =============================================================================
+# # Cart-to-Purchase Propensity Model Configuration
+# # =============================================================================
+
+# # MLflow Configuration
+# mlflow:
+#   tracking_uri: "http://localhost:5000"
+#   experiment_name: "cart_purchase_propensity"
+#   artifact_location: "s3://mlflow/"
+#   registry_uri: "http://localhost:5000"
+#   tags:
+#     project: "cart-to-purchase"
+#     task: "binary_classification"
+#     team: "mlops"
+
+# # Model Configuration
+# model:
+#   name: "purchase_propensity_model"
+#   version: "1.0.0"
+#   model_type: "xgboost"  # Options: "logistic_regression", "xgboost"
+#   train_test_split: 0.2
+#   random_state: 42
+
+#   # Logistic Regression parameters
+#   logistic_regression:
+#     C: 100
+#     solver: "lbfgs"
+#     max_iter: 1000
+#     class_weight: "balanced"
+#     n_jobs: -1
+
+#   # XGBoost parameters
+#   xgboost:
+#     n_estimators: 200
+#     max_depth: 6
+#     learning_rate: 0.1
+#     min_child_weight: 1
+#     subsample: 0.8
+#     colsample_bytree: 0.8
+#     objective: "binary:logistic"
+#     eval_metric: ["auc", "logloss"]
+#     early_stopping_rounds: 20
+#     scale_pos_weight: 1  # Will be calculated if class_weight="balanced"
+#     n_jobs: -1
+#     random_state: 42
+
+# # Feature Configuration
+# features:
+#   target_column: "is_purchased"
+#   # Numerical features (23 features)
+#   numerical_features:
+#     - "price"
+#     - "activity_count"
+#     - "event_weekday"
+#     - "event_hour"
+#     - "user_total_events"
+#     - "user_total_views"
+#     - "user_total_carts"
+#     - "user_total_purchases"
+#     - "user_view_to_cart_rate"
+#     - "user_cart_to_purchase_rate"
+#     - "user_avg_purchase_price"
+#     - "user_unique_products"
+#     - "user_unique_categories"
+#     - "product_total_events"
+#     - "product_total_views"
+#     - "product_total_carts"
+#     - "product_total_purchases"
+#     - "product_view_to_cart_rate"
+#     - "product_cart_to_purchase_rate"
+#     - "product_unique_buyers"
+#     - "brand_purchase_rate"
+#     - "price_vs_user_avg"
+#     - "price_vs_category_avg"
+  
+#   # Categorical features (3 features)
+#   categorical_features:
+#     - "brand"
+#     - "category_code_level1"
+#     - "category_code_level2"
+
+# # Evaluation Configuration
+# evaluation:
+#   # Metrics to calculate
+#   metrics:
+#     - "accuracy"
+#     - "precision"
+#     - "recall"
+#     - "f1"
+#     - "auc_roc"
+#     - "log_loss"
+  
+#   # SHAP explainability
+#   shap:
+#     enabled: true
+#     explainer_type: "tree"  # "tree" for XGBoost, "linear" for Logistic
+#     max_samples: 1000
+#     save_plots: true
+  
+#   # Thresholds for model quality gates
+#   thresholds:
+#     accuracy: 0.80
+#     auc_roc: 0.85
+#     f1_macro: 0.70
+
+# # Preprocessing Configuration
+# preprocessing:
+#   numerical_scaler: "standard"  # Options: "standard", "minmax", "robust"
+#   categorical_encoder: "onehot"  # Options: "onehot", "label", "target"
+#   max_categories: 100  # For OneHotEncoder
+#   handle_unknown: "ignore"
+
+# # Logging Configuration
+# logging:
+#   level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+#   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

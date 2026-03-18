@@ -1,0 +1,115 @@
+{
+  "model": "LogisticRegression",
+  "timestamp": "2026-01-20T16:05:41.385165",
+  "hyperparameters": {
+    "best_C": 100,
+    "solver": "lbfgs",
+    "max_iter": 1000,
+    "class_weight": "balanced"
+  },
+  "data_split": {
+    "train_size": 1877400,
+    "val_size": 469351,
+    "test_size": 586688,
+    "train_val_size": 2346751,
+    "total_size": 2933439
+  },
+  "features": {
+    "numerical": [
+      "price",
+      "activity_count",
+      "event_weekday"
+    ],
+    "categorical": [
+      "brand",
+      "category_code_level1",
+      "category_code_level2"
+    ],
+    "preprocessing": {
+      "numerical": "StandardScaler",
+      "categorical": "OneHotEncoder (max_categories=100)"
+    }
+  },
+  "regularization_tuning": [
+    {
+      "C": 0.001,
+      "val_accuracy": 0.5572,
+      "val_f1_macro": 0.5238,
+      "val_auc_roc": 0.5786
+    },
+    {
+      "C": 0.01,
+      "val_accuracy": 0.5536,
+      "val_f1_macro": 0.5219,
+      "val_auc_roc": 0.5798
+    },
+    {
+      "C": 0.1,
+      "val_accuracy": 0.552,
+      "val_f1_macro": 0.5212,
+      "val_auc_roc": 0.58
+    },
+    {
+      "C": 1,
+      "val_accuracy": 0.5522,
+      "val_f1_macro": 0.5213,
+      "val_auc_roc": 0.58
+    },
+    {
+      "C": 10,
+      "val_accuracy": 0.5524,
+      "val_f1_macro": 0.5214,
+      "val_auc_roc": 0.58
+    },
+    {
+      "C": 100,
+      "val_accuracy": 0.552,
+      "val_f1_macro": 0.5211,
+      "val_auc_roc": 0.58
+    }
+  ],
+  "validation_metrics": {
+    "accuracy": 0.552,
+    "precision": {
+      "macro": 0.5453,
+      "class_0": 0.7838,
+      "class_1": 0.3068
+    },
+    "recall": {
+      "macro": 0.5587,
+      "class_0": 0.5447,
+      "class_1": 0.5728
+    },
+    "f1": {
+      "macro": 0.5211,
+      "class_0": 0.6427,
+      "class_1": 0.3995
+    },
+    "auc_roc": 0.58
+  },
+  "test_metrics": {
+    "accuracy": 0.5502,
+    "precision": {
+      "macro": 0.5441,
+      "class_0": 0.7827,
+      "class_1": 0.3054
+    },
+    "recall": {
+      "macro": 0.5572,
+      "class_0": 0.5427,
+      "class_1": 0.5717
+    },
+    "f1": {
+      "macro": 0.5196,
+      "class_0": 0.641,
+      "class_1": 0.3982
+    },
+    "auc_roc": 0.577
+  },
+  "confusion_matrix": {
+    "true_negative": 235540,
+    "false_positive": 198481,
+    "false_negative": 65385,
+    "true_positive": 87282
+  }
+}

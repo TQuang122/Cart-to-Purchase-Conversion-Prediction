@@ -1,0 +1,137 @@
+{
+  "model": "LogisticRegression",
+  "version": "v2_enriched_features",
+  "timestamp": "2026-01-20T16:07:00.184533",
+  "hyperparameters": {
+    "best_C": 100,
+    "solver": "lbfgs",
+    "max_iter": 1000,
+    "class_weight": "balanced"
+  },
+  "data_split": {
+    "train_size": 1875197,
+    "val_size": 468800,
+    "test_size": 586000,
+    "train_val_size": 2343997,
+    "total_size": 2929997
+  },
+  "features": {
+    "numerical": [
+      "price",
+      "activity_count",
+      "event_weekday",
+      "event_hour",
+      "user_total_events",
+      "user_total_views",
+      "user_total_carts",
+      "user_total_purchases",
+      "user_view_to_cart_rate",
+      "user_cart_to_purchase_rate",
+      "user_avg_purchase_price",
+      "user_unique_products",
+      "user_unique_categories",
+      "product_total_events",
+      "product_total_views",
+      "product_total_carts",
+      "product_total_purchases",
+      "product_view_to_cart_rate",
+      "product_cart_to_purchase_rate",
+      "product_unique_buyers",
+      "brand_purchase_rate",
+      "price_vs_user_avg",
+      "price_vs_category_avg"
+    ],
+    "categorical": [
+      "brand",
+      "category_code_level1",
+      "category_code_level2"
+    ],
+    "total_count": 26,
+    "preprocessing": {
+      "numerical": "StandardScaler",
+      "categorical": "OneHotEncoder (max_categories=100)"
+    }
+  },
+  "regularization_tuning": [
+    {
+      "C": 0.001,
+      "val_accuracy": 0.8109,
+      "val_f1_macro": 0.7751,
+      "val_auc_roc": 0.8991
+    },
+    {
+      "C": 0.01,
+      "val_accuracy": 0.8112,
+      "val_f1_macro": 0.7754,
+      "val_auc_roc": 0.8992
+    },
+    {
+      "C": 0.1,
+      "val_accuracy": 0.8112,
+      "val_f1_macro": 0.7754,
+      "val_auc_roc": 0.8992
+    },
+    {
+      "C": 1,
+      "val_accuracy": 0.8112,
+      "val_f1_macro": 0.7754,
+      "val_auc_roc": 0.8992
+    },
+    {
+      "C": 10,
+      "val_accuracy": 0.8112,
+      "val_f1_macro": 0.7754,
+      "val_auc_roc": 0.8992
+    },
+    {
+      "C": 100,
+      "val_accuracy": 0.8112,
+      "val_f1_macro": 0.7754,
+      "val_auc_roc": 0.8992
+    }
+  ],
+  "validation_metrics": {
+    "accuracy": 0.8112,
+    "precision": {
+      "macro": 0.7611,
+      "class_0": 0.919,
+      "class_1": 0.6033
+    },
+    "recall": {
+      "macro": 0.8057,
+      "class_0": 0.817,
+      "class_1": 0.7944
+    },
+    "f1": {
+      "macro": 0.7754,
+      "class_0": 0.865,
+      "class_1": 0.6858
+    },
+    "auc_roc": 0.8992
+  },
+  "test_metrics": {
+    "accuracy": 0.8116,
+    "precision": {
+      "macro": 0.7616,
+      "class_0": 0.9193,
+      "class_1": 0.6039
+    },
+    "recall": {
+      "macro": 0.8062,
+      "class_0": 0.8174,
+      "class_1": 0.7951
+    },
+    "f1": {
+      "macro": 0.7759,
+      "class_0": 0.8654,
+      "class_1": 0.6864
+    },
+    "auc_roc": 0.8996
+  },
+  "confusion_matrix": {
+    "true_negative": 354762,
+    "false_positive": 79259,
+    "false_negative": 31143,
+    "true_positive": 120836
+  }
+}

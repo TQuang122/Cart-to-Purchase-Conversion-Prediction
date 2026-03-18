@@ -1,0 +1,14 @@
+project: propensity_features
+provider: local
+registry: data/registry.db
+
+# OFFLINE STORE
+offline_store:
+  type: file
+
+# ONLINE STORE (Redis)
+online_store:
+  type: redis
+  connection_string: localhost:6379
+  
+entity_key_serialization_version: 3

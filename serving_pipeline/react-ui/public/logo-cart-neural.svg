@@ -1,0 +1,38 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="20" y1="16" x2="110" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="0.5" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <radialGradient id="g2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62 54) rotate(90) scale(48)">
+      <stop stop-color="#22D3EE" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#0F172A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#0F172A"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#g2)"/>
+
+  <path d="M25 34H35L42 78C42.6 81.6 45.7 84.2 49.4 84.2H88.2" stroke="url(#g1)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M43 45H98L91 70.5C90.2 73.4 87.6 75.4 84.6 75.4H47.8" stroke="url(#g1)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="54" cy="96" r="6.5" fill="#22D3EE"/>
+  <circle cx="84" cy="96" r="6.5" fill="#A78BFA"/>
+
+  <circle cx="48" cy="40" r="4.4" fill="#60A5FA"/>
+  <circle cx="62" cy="31" r="4.6" fill="#7DD3FC"/>
+  <circle cx="78" cy="28" r="4.8" fill="#22D3EE"/>
+  <circle cx="92" cy="36" r="4.6" fill="#A78BFA"/>
+  <circle cx="68" cy="45" r="4.2" fill="#67E8F9"/>
+  <circle cx="84" cy="48" r="4.2" fill="#C4B5FD"/>
+  <circle cx="56" cy="52" r="4.1" fill="#93C5FD"/>
+
+  <path d="M48 40L62 31L78 28L92 36" stroke="#93C5FD" stroke-opacity="0.9" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M62 31L68 45L84 48" stroke="#67E8F9" stroke-opacity="0.9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 40L56 52L68 45" stroke="#93C5FD" stroke-opacity="0.75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M78 28L84 48" stroke="#67E8F9" stroke-opacity="0.7" stroke-width="2" stroke-linecap="round"/>
+  <path d="M92 36L84 48" stroke="#C4B5FD" stroke-opacity="0.72" stroke-width="2" stroke-linecap="round"/>
+  <path d="M56 52L49 62" stroke="#93C5FD" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M84 48L96 58" stroke="#C4B5FD" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

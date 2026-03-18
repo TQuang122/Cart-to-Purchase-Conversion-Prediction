@@ -1,0 +1,17 @@
+{
+  "n_estimators": 150,
+  "max_depth": 9,
+  "learning_rate": 0.11727022873748118,
+  "subsample": 0.9077382066059041,
+  "colsample_bytree": 0.8210348996781217,
+  "min_child_weight": 14,
+  "gamma": 1.0531097264257594,
+  "reg_alpha": 0.02983923034481359,
+  "reg_lambda": 0.00012584040886100197,
+  "scale_pos_weight": 1.7862836625845722,
+  "objective": "binary:logistic",
+  "eval_metric": "logloss",
+  "n_jobs": -1,
+  "random_state": 42,
+  "use_label_encoder": false
+}
