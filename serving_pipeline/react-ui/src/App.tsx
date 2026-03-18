@@ -172,7 +172,7 @@ function App() {
                   </button>
                 </div>
               </div>
-              <DashboardHeader layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
+              <DashboardHeader apiBaseUrl={state.apiBaseUrl} layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
             </section>
             <section className="mt-6 dashboard-shell dashboard-card-scale-md animate-slide-up p-3 sm:p-4" style={{ animationDelay: '180ms' }}>
               <div className="mb-3 flex items-center justify-between">
