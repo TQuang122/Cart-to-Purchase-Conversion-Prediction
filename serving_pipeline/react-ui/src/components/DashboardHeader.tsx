@@ -95,6 +95,8 @@ export function DashboardHeader({
   selectedThreshold,
   onThresholdChange,
 }: DashboardHeaderProps) {
+  // Normalize: always strip trailing /predict so we can consistently append it
+  const resolvedBaseUrl = (apiBaseUrl ?? 'http://127.0.0.1:8000').replace(/\/predict\/?$/, '')
   const [stats, setStats] = useState<StatsData | null>(null)
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading')
   const [animatedPredictions, setAnimatedPredictions] = useState(0)
@@ -107,7 +109,7 @@ export function DashboardHeader({
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
-      const response = await fetch(`${apiBaseUrl}/predict/stats`, { signal: controller.signal })
+      const response = await fetch(`${resolvedBaseUrl}/predict/stats`, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (response.ok) {
         const data = await response.json()
@@ -123,7 +125,7 @@ export function DashboardHeader({
     } finally {
       setIsRefreshing(false)
     }
-  }, [apiBaseUrl, onStatsUpdate])
+  }, [resolvedBaseUrl, onStatsUpdate])
 
   useEffect(() => {
     fetchStats()
