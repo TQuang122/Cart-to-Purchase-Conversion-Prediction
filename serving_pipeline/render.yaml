@@ -6,17 +6,13 @@ services:
     name: ctp-api
     runtime: python311
     region: oregon
-  - type: web
-    name: ctp-api
-    env: python3
-    region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port ${PORT}
     envVars:
       - key: MLFLOW_TRACKING_URI
-        value: https://mlflow-production-1234.up.railway.app
+        sync: false
       - key: MLFLOW_S3_ENDPOINT_URL
-        value: https://play.min.io
+        sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY

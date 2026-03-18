@@ -1,11 +1,12 @@
 # """
-# Prediction router — loads a real XGBoost model from MLflow Registry.
-# No random, no MD5 hashing. All predictions are deterministic.
+# Prediction router — loads XGBoost model from local disk.
+# No MLflow required. No random. All predictions are deterministic.
+# Model + encoders are committed to serving_pipeline/models/.
 # """
 #
 import os
 import json
-import tempfile
+from datetime import datetime
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -23,45 +24,37 @@ from api.schemas import (
     CartPrediction,
     ExplainabilityPayload,
     FeatureContribution,
-    FeatureQuality,
     ServingModel,
+    FeatureQuality,
 )
-
 # ─────────────────────────────────────────────────────────────────
-# MLflow / S3 environment  (must be set before importing mlflow)
+# Model artifacts (local disk — committed to repo)
 # ─────────────────────────────────────────────────────────────────
-os.environ.setdefault("AWS_ACCESS_KEY_ID", "minio")
-os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minio123")
-os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
-os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://localhost:9000")
+_MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 
-try:
-    import mlflow  # noqa: E402  (must be after env vars)
-except Exception as exc:  # pragma: no cover - runtime environment dependent
-    mlflow = None
-    _mlflow_import_error = str(exc)
-else:
-    _mlflow_import_error = None
+_MODEL_PATHS: dict[ServingModel, Path] = {
+    "xgboost":  _MODELS_DIR / "xgboost_model.joblib",
+    "lightgbm": _MODELS_DIR / "lightgbm_model.joblib",
+    "catboost": _MODELS_DIR / "catboost_model.joblib",
+}
+_ENCODER_PATH = _MODELS_DIR / "encoders.json"
 
-MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 DEFAULT_MODEL_KEY: ServingModel = os.getenv("DEFAULT_SERVING_MODEL", "xgboost")  # type: ignore[assignment]
-DEFAULT_MODEL_ALIAS = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
 
 MODEL_REGISTRY_NAMES: dict[ServingModel, str] = {
-    "xgboost": os.getenv("MLFLOW_MODEL_NAME_XGBOOST", "xgboost_ctp"),
+    "xgboost":  os.getenv("MLFLOW_MODEL_NAME_XGBOOST",  "xgboost_ctp"),
     "lightgbm": os.getenv("MLFLOW_MODEL_NAME_LIGHTGBM", "lightgbm_ctp"),
     "catboost": os.getenv("MLFLOW_MODEL_NAME_CATBOOST", "catboost_ctp"),
 }
-
 MODEL_ALIASES: dict[ServingModel, str] = {
-    "xgboost": os.getenv("MLFLOW_MODEL_ALIAS_XGBOOST", DEFAULT_MODEL_ALIAS),
-    "lightgbm": os.getenv("MLFLOW_MODEL_ALIAS_LIGHTGBM", DEFAULT_MODEL_ALIAS),
-    "catboost": os.getenv("MLFLOW_MODEL_ALIAS_CATBOOST", DEFAULT_MODEL_ALIAS),
+    "xgboost":  os.getenv("MLFLOW_MODEL_ALIAS_XGBOOST",  "champion"),
+    "lightgbm": os.getenv("MLFLOW_MODEL_ALIAS_LIGHTGBM", "champion"),
+    "catboost": os.getenv("MLFLOW_MODEL_ALIAS_CATBOOST", "champion"),
 }
-
 VALID_MODELS: tuple[ServingModel, ...] = ("xgboost", "lightgbm", "catboost")
 if DEFAULT_MODEL_KEY not in VALID_MODELS:
     DEFAULT_MODEL_KEY = "xgboost"
+
 
 # Feature column order (must match training order exactly)
 NUMERICAL_FEATURES = [
@@ -124,158 +117,60 @@ FEATURE_COLUMNS_LITE = [
 ]
 
 # ─────────────────────────────────────────────────────────────────
-# Model loading (done once at import time)
+# Model loading (done once at import time — local disk)
 # ─────────────────────────────────────────────────────────────────
-
 ModelBundle = dict[str, Any]
 _model_bundles: dict[ServingModel, ModelBundle] = {}
-_feast_store = None
+_feast_store: Any = None
 _feast_init_error: str | None = None
-_predict_threshold: float = float(
-    os.getenv("PREDICT_THRESHOLD", "0.55")
-)  # tuned for v7 (scale_pos_weight model)
+_predict_threshold: float = float(os.getenv("PREDICT_THRESHOLD", "0.525"))
 
 
-def _resolve_model_version(client: Any, model_key: ServingModel) -> Any:
-    model_name = MODEL_REGISTRY_NAMES[model_key]
-    alias = MODEL_ALIASES[model_key]
-    try:
-        return client.get_model_version_by_alias(model_name, alias)
-    except Exception:
-        versions = client.search_model_versions(f"name='{model_name}'")
-        if not versions:
-            raise RuntimeError(f"No model versions found for '{model_name}'")
-        return max(versions, key=lambda item: int(item.version))
+def _load_encoders() -> dict[str, Any]:
+    """Load target encoders from JSON."""
+    if not _ENCODER_PATH.exists():
+        return {}
+    with open(_ENCODER_PATH) as f:
+        return json.load(f)
 
 
-def _resolve_model_artifact_uri(
-    client: Any, model_name: str, run_id: str, fallback_uri: str
-) -> str:
-    """
-    Resolve a loadable model URI in MLflow 3.x where registered model `source`
-    can still point to runs:/<run_id>/model while actual artifacts are under
-    model-centric paths (s3://.../models/m-<id>/artifacts).
-    """
-    try:
-        experiment_ids = [exp.experiment_id for exp in client.search_experiments()]
-        page_token = None
-        while True:
-            response = client.search_logged_models(
-                experiment_ids=experiment_ids,
-                max_results=500,
-                page_token=page_token,
-            )
-            for logged_model in response:
-                if (
-                    logged_model.source_run_id == run_id
-                    and logged_model.name == model_name
-                    and logged_model.artifact_location
-                ):
-                    return logged_model.artifact_location
-
-            page_token = response.token
-            if not page_token:
-                break
-    except Exception:
-        pass
-
-    return fallback_uri
-
-
-def _load_model_bundle(model_key: ServingModel) -> ModelBundle:
-    """Load one model bundle (model + encoders + metadata) from MLflow registry."""
-    import sys
-    from pathlib import Path
-
-    # Add model_pipeline/ (parent of src/) to sys.path so 'src.*' imports resolve.
-    # cloudpickle serialized BinaryClassifierWrapper with __module__='src.model.xgboost_trainer'.
-    # parents[3] = project root (serving_pipeline/api/routers/predict.py -> 3 levels up).
-    _project_root = Path(__file__).resolve().parents[3]
-    _model_pipeline_root = str(_project_root / "model_pipeline")
-    if _model_pipeline_root not in sys.path:
-        sys.path.insert(0, _model_pipeline_root)
+def _load_bundle_from_disk(model_key: ServingModel) -> ModelBundle:
+    """Load model + encoders from local disk (no MLflow required)."""
+    import joblib
 
     bundle: ModelBundle = {
         "model": None,
-        "encoders": {},
+        "encoders": _load_encoders(),
         "model_uri": None,
         "run_id": None,
-        "model_source": "heuristic_fallback",
+        "model_source": "local_disk",
         "model_load_error": None,
         "last_checked_at": datetime.now().isoformat(),
         "last_loaded_at": None,
     }
-
-    if mlflow is None:
-        bundle["model_load_error"] = (
-            "mlflow package is not installed in current Python environment. "
-            f"Import error: {_mlflow_import_error}"
-        )
+    model_path = _MODEL_PATHS.get(model_key)
+    if model_path is None:
+        bundle["model_load_error"] = f"No local path configured for model '{model_key}'"
         return bundle
-
+    if not model_path.exists():
+        bundle["model_load_error"] = f"Model file not found: {model_path}"
+        return bundle
     try:
-        mlflow.set_tracking_uri(MLFLOW_URI)
-        client = mlflow.MlflowClient(tracking_uri=MLFLOW_URI)
-
-        # Resolve alias if possible; otherwise fallback to latest model version.
-        mv = _resolve_model_version(client, model_key)
-        run_id = mv.run_id
-        model_name = MODEL_REGISTRY_NAMES[model_key]
-        registry_uri = f"models:/{model_name}/{mv.version}"
-        model_uri = _resolve_model_artifact_uri(
-            client, model_name, run_id, registry_uri
-        )
-
-        encoders: dict[str, Any] = {}
-
-        # Load encoder classes - support both legacy (list) and target encoding (dict) formats
-        tmp = tempfile.mkdtemp()
-        try:
-            enc_path = client.download_artifacts(run_id, "encoder_classes.json", tmp)
-            with open(enc_path) as f:
-                encoder_data = json.load(f)
-
-            # Handle both formats:
-            # - Legacy: {col: ["class1", "class2", ...]}
-            # - Target encoding: {col: {"mapping": {cat: mean, ...}, "global_mean": float}}
-            for col, enc_info in encoder_data.items():
-                if isinstance(enc_info, dict) and "mapping" in enc_info:
-                    encoders[col] = enc_info
-                else:
-                    le = LabelEncoder()
-                    le.classes_ = np.array(enc_info)
-                    encoders[col] = le
-        except Exception:
-            encoders = {}
-
-        print(f"[predict] Using model_uri for {model_key}: {model_uri}")
-        # cloudpickle serialized BinaryClassifierWrapper as 'src.model.xgboost_trainer'.
-        # model_pipeline/ is now in sys.path, so 'src' package is importable directly.
-        pyfunc_model = mlflow.pyfunc.load_model(model_uri)
-        model = pyfunc_model.unwrap_python_model().model
-
+        model = joblib.load(model_path)
         bundle["model"] = model
-        bundle["encoders"] = encoders
-        bundle["model_uri"] = model_uri
-        bundle["run_id"] = run_id
-        bundle["model_source"] = "mlflow"
+        bundle["model_uri"] = str(model_path)
         bundle["last_loaded_at"] = datetime.now().isoformat()
-        print(f"[predict] Model loaded for {model_key}: {model_uri} (run_id={run_id})")
-
+        print(f"[predict] Loaded {model_key} from {model_path}")
     except Exception as exc:
         bundle["model_load_error"] = str(exc)
-        print(
-            f"[predict] WARNING: Failed to load {model_key} model from MLflow — {exc}"
-        )
-        print(f"[predict] Falling back to heuristic scoring for {model_key}.")
-
+        print(f"[predict] Failed to load {model_key}: {exc}")
     return bundle
 
 
 def _load_models() -> None:
     global _model_bundles
     _model_bundles = {
-        model_key: _load_model_bundle(model_key) for model_key in VALID_MODELS
+        model_key: _load_bundle_from_disk(model_key) for model_key in VALID_MODELS
     }
 
 
