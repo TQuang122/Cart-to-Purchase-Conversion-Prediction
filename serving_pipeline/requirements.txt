@@ -34,6 +34,7 @@ websockets>=12.0,<14.0
 
 # HTTP Client
 requests>=2.31.0,<2.33.0
+httpx>=0.26.0,<0.28.0
 
 # Configuration & Environment
 python-dotenv>=1.0.0,<1.1.0
