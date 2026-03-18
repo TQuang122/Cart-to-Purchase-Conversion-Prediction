@@ -1,0 +1,24 @@
+# Render Blueprint for Cart-to-Purchase Backend
+# Deploy: render-blueprints apply --token YOUR_RENDER_TOKEN --spec render.yaml
+
+services:
+  - type: web
+    name: ctp-api
+    env: python3
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MLFLOW_TRACKING_URI
+        value: https://mlflow-production-1234.up.railway.app
+      - key: MLFLOW_S3_ENDPOINT_URL
+        value: https://play.min.io
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PREDICT_THRESHOLD
+        value: "0.525"
+    autoDeploy: true
