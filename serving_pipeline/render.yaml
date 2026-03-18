@@ -4,6 +4,10 @@
 services:
   - type: web
     name: ctp-api
+    runtime: python311
+    region: oregon
+  - type: web
+    name: ctp-api
     env: python3
     region: oregon
     buildCommand: pip install -r requirements.txt
