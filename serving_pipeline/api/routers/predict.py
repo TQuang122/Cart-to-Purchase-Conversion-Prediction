@@ -33,9 +33,7 @@ from api.schemas import (
 _MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 
 _MODEL_PATHS: dict[ServingModel, Path] = {
-    "xgboost":  _MODELS_DIR / "xgboost_model.joblib",
-    "lightgbm": _MODELS_DIR / "lightgbm_model.joblib",
-    "catboost": _MODELS_DIR / "catboost_model.joblib",
+    "xgboost": _MODELS_DIR / "xgboost_model.joblib",
 }
 _ENCODER_PATH = _MODELS_DIR / "encoders.json"
 
@@ -51,7 +49,7 @@ MODEL_ALIASES: dict[ServingModel, str] = {
     "lightgbm": os.getenv("MLFLOW_MODEL_ALIAS_LIGHTGBM", "champion"),
     "catboost": os.getenv("MLFLOW_MODEL_ALIAS_CATBOOST", "champion"),
 }
-VALID_MODELS: tuple[ServingModel, ...] = ("xgboost", "lightgbm", "catboost")
+VALID_MODELS: tuple[ServingModel, ...] = ("xgboost",)
 if DEFAULT_MODEL_KEY not in VALID_MODELS:
     DEFAULT_MODEL_KEY = "xgboost"
 
