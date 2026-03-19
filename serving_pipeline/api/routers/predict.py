@@ -27,6 +27,7 @@ from api.schemas import (
     ServingModel,
     FeatureQuality,
 )
+
 # ─────────────────────────────────────────────────────────────────
 # Model artifacts (local disk — committed to repo)
 # ─────────────────────────────────────────────────────────────────
@@ -40,12 +41,12 @@ _ENCODER_PATH = _MODELS_DIR / "encoders.json"
 DEFAULT_MODEL_KEY: ServingModel = os.getenv("DEFAULT_SERVING_MODEL", "xgboost")  # type: ignore[assignment]
 
 MODEL_REGISTRY_NAMES: dict[ServingModel, str] = {
-    "xgboost":  os.getenv("MLFLOW_MODEL_NAME_XGBOOST",  "xgboost_ctp"),
+    "xgboost": os.getenv("MLFLOW_MODEL_NAME_XGBOOST", "xgboost_ctp"),
     "lightgbm": os.getenv("MLFLOW_MODEL_NAME_LIGHTGBM", "lightgbm_ctp"),
     "catboost": os.getenv("MLFLOW_MODEL_NAME_CATBOOST", "catboost_ctp"),
 }
 MODEL_ALIASES: dict[ServingModel, str] = {
-    "xgboost":  os.getenv("MLFLOW_MODEL_ALIAS_XGBOOST",  "champion"),
+    "xgboost": os.getenv("MLFLOW_MODEL_ALIAS_XGBOOST", "champion"),
     "lightgbm": os.getenv("MLFLOW_MODEL_ALIAS_LIGHTGBM", "champion"),
     "catboost": os.getenv("MLFLOW_MODEL_ALIAS_CATBOOST", "champion"),
 }
@@ -908,6 +909,23 @@ def predict_feast(
         raise
     except Exception as exc:
         _track_prediction(False, model)
+        error_text = str(exc)
+        if "No module named 'feast'" in error_text:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Feast lookup is not available on this deployment: missing Python package 'feast'. "
+                    "Install feast in serving environment or use Raw/Batch prediction tabs."
+                ),
+            ) from exc
+        if "Feast repo path does not exist" in error_text:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Feast lookup is not available on this deployment: feature repo path is missing. "
+                    "Set FEAST_REPO_PATH to a valid repository or use Raw/Batch prediction tabs."
+                ),
+            ) from exc
         raise HTTPException(
             status_code=500,
             detail=(

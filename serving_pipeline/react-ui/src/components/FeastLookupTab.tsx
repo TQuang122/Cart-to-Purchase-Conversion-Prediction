@@ -70,6 +70,9 @@ export const FeastLookupTab = () => {
         error instanceof ApiClientError
           ? error.message
           : 'Failed to predict with feast lookup input.'
+      if (error instanceof ApiClientError && (error.status === 503 || message.toLowerCase().includes('not available'))) {
+        toast.error('Feast lookup is unavailable on production server. Use Raw Features or Batch CSV instead.')
+      }
       dispatch({ type: 'setError', payload: message })
       toast.error(message)
       setPrediction(null)
