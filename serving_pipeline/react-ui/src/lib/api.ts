@@ -27,7 +27,8 @@ const resolveBaseUrl = (): string => {
   if (!envBase) {
     return DEFAULT_BASE_URL
   }
-  return envBase.replace(/\/$/, '')
+  const normalized = envBase.replace(/\/$/, '') || DEFAULT_BASE_URL
+  return normalized.endsWith('/predict') ? normalized : `${normalized}/predict`
 }
 
 const API_BASE_URL = resolveBaseUrl()
