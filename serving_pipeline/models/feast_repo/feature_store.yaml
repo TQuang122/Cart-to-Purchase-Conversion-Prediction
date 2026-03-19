@@ -1,0 +1,15 @@
+# Feast Feature Store for Cart-to-Purchase Serving
+project: propensity_features
+provider: local
+registry: data/registry.db
+
+# OFFLINE STORE
+offline_store:
+  type: file
+
+# ONLINE STORE (SQLite — works on ephemeral Render filesystem)
+online_store:
+  type: sqlite
+  path: data/online_store.db
+
+entity_key_serialization_version: 3

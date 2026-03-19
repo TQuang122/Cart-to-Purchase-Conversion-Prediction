@@ -115,6 +115,12 @@ FEATURE_COLUMNS_LITE = [
     "category_code_level2",
 ]
 
+# Precomputed feature lookups (populated at startup via precompute script)
+_USER_FEATURES_PATH = _MODELS_DIR / "user_features.parquet"
+_PRODUCT_FEATURES_PATH = _MODELS_DIR / "product_features.parquet"
+_user_features_df: pd.DataFrame | None = None
+_product_features_df: pd.DataFrame | None = None
+
 # ─────────────────────────────────────────────────────────────────
 # Model loading (done once at import time — local disk)
 # ─────────────────────────────────────────────────────────────────
@@ -231,6 +237,17 @@ def _get_feast_store() -> Any:
         raise RuntimeError(_feast_init_error) from exc
 
 
+def _load_feature_lookups() -> None:
+    """Load precomputed user/product feature lookups at startup."""
+    global _user_features_df, _product_features_df
+    if _user_features_df is None and _USER_FEATURES_PATH.exists():
+        print(f"[predict] Loading user features from {_USER_FEATURES_PATH}")
+        _user_features_df = pd.read_parquet(_USER_FEATURES_PATH)
+        print(f"[predict] Loaded {len(_user_features_df):,} user rows")
+    if _product_features_df is None and _PRODUCT_FEATURES_PATH.exists():
+        print(f"[predict] Loading product features from {_PRODUCT_FEATURES_PATH}")
+        _product_features_df = pd.read_parquet(_PRODUCT_FEATURES_PATH)
+        print(f"[predict] Loaded {len(_product_features_df):,} product rows")
 def _resolve_entity_key(raw_value: str) -> int | str:
     value = raw_value.strip()
     if not value:
@@ -294,91 +311,74 @@ def _to_str(value: Any, default: str = "unknown") -> str:
     return text if text else default
 
 
+
 def _fetch_raw_from_feast(payload: CartInputFeast) -> CartInputRaw:
-    store = _get_feast_store()
+    """Fetch features using precomputed parquet lookups (no Feast/Redis needed)."""
+    _load_feature_lookups()
 
-    entity_row = {
-        "user_id": _resolve_entity_key(payload.user_id),
-        "product_id": _resolve_entity_key(payload.product_id),
-    }
+    uid = _resolve_entity_key(payload.user_id)
+    pid = _resolve_entity_key(payload.product_id)
 
-    online_df = store.get_online_features(
-        entity_rows=[entity_row],
-        features=FEAST_FEATURE_REFS,
-    ).to_df()
+    user_row = None
+    if _user_features_df is not None:
+        matches = _user_features_df[_user_features_df["user_id"] == uid]
+        if not matches.empty:
+            user_row = matches.iloc[0].to_dict()
 
-    if online_df.empty:
+    prod_row = None
+    if _product_features_df is not None:
+        matches = _product_features_df[_product_features_df["product_id"] == pid]
+        if not matches.empty:
+            prod_row = matches.iloc[0].to_dict()
+
+    if user_row is None and prod_row is None:
         raise HTTPException(
             status_code=404,
             detail=(
-                f"No Feast online features found for user_id={payload.user_id}, "
-                f"product_id={payload.product_id}."
+                f"No features found for user_id={payload.user_id} AND product_id={payload.product_id}. "
+                "No Feast online features available for these entities."
             ),
         )
 
-    row = online_df.iloc[0].to_dict()
+    def get(row, key, default=0.0):
+        v = row.get(key) if row else None
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return default
+        return v
+
+    def get_str(row, key, default="unknown"):
+        v = row.get(key) if row else None
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return default
+        return str(v)
 
     return CartInputRaw(
-        price=_to_float(_resolve_feature_value(row, "price")),
-        activity_count=_to_float(_resolve_feature_value(row, "activity_count")),
-        event_weekday=_to_int(_resolve_feature_value(row, "event_weekday")),
-        event_hour=_to_int(_resolve_feature_value(row, "event_hour")),
-        user_total_events=_to_float(_resolve_feature_value(row, "user_total_events")),
-        user_total_views=_to_float(_resolve_feature_value(row, "user_total_views")),
-        user_total_carts=_to_float(_resolve_feature_value(row, "user_total_carts")),
-        user_total_purchases=_to_float(
-            _resolve_feature_value(row, "user_total_purchases")
-        ),
-        user_view_to_cart_rate=_to_float(
-            _resolve_feature_value(row, "user_view_to_cart_rate")
-        ),
-        user_cart_to_purchase_rate=_to_float(
-            _resolve_feature_value(row, "user_cart_to_purchase_rate")
-        ),
-        user_avg_purchase_price=_to_float(
-            _resolve_feature_value(row, "user_avg_purchase_price")
-        ),
-        user_unique_products=_to_float(
-            _resolve_feature_value(row, "user_unique_products")
-        ),
-        user_unique_categories=_to_float(
-            _resolve_feature_value(row, "user_unique_categories")
-        ),
-        product_total_events=_to_float(
-            _resolve_feature_value(row, "product_total_events")
-        ),
-        product_total_views=_to_float(
-            _resolve_feature_value(row, "product_total_views")
-        ),
-        product_total_carts=_to_float(
-            _resolve_feature_value(row, "product_total_carts")
-        ),
-        product_total_purchases=_to_float(
-            _resolve_feature_value(row, "product_total_purchases")
-        ),
-        product_view_to_cart_rate=_to_float(
-            _resolve_feature_value(row, "product_view_to_cart_rate")
-        ),
-        product_cart_to_purchase_rate=_to_float(
-            _resolve_feature_value(row, "product_cart_to_purchase_rate")
-        ),
-        product_unique_buyers=_to_float(
-            _resolve_feature_value(row, "product_unique_buyers")
-        ),
-        brand_purchase_rate=_to_float(
-            _resolve_feature_value(row, "brand_purchase_rate")
-        ),
-        price_vs_user_avg=_to_float(_resolve_feature_value(row, "price_vs_user_avg")),
-        price_vs_category_avg=_to_float(
-            _resolve_feature_value(row, "price_vs_category_avg")
-        ),
-        brand=_to_str(_resolve_feature_value(row, "brand")),
-        category_code_level1=_to_str(
-            _resolve_feature_value(row, "category_code_level1")
-        ),
-        category_code_level2=_to_str(
-            _resolve_feature_value(row, "category_code_level2")
-        ),
+        price=get(prod_row, "price"),
+        activity_count=get(prod_row, "activity_count"),
+        MH|        event_weekday=int(get(user_row, 'event_weekday', 0)),
+        PS|        event_hour=int(get(user_row, 'event_hour', 12)),
+        user_total_events=get(user_row, "user_total_events"),
+        user_total_views=get(user_row, "user_total_views"),
+        user_total_carts=get(user_row, "user_total_carts"),
+        user_total_purchases=get(user_row, "user_total_purchases"),
+        user_view_to_cart_rate=get(user_row, "user_view_to_cart_rate"),
+        user_cart_to_purchase_rate=get(user_row, "user_cart_to_purchase_rate"),
+        user_avg_purchase_price=get(user_row, "user_avg_purchase_price"),
+        user_unique_products=get(user_row, "user_unique_products"),
+        user_unique_categories=get(user_row, "user_unique_categories"),
+        product_total_events=get(prod_row, "product_total_events"),
+        product_total_views=get(prod_row, "product_total_views"),
+        product_total_carts=get(prod_row, "product_total_carts"),
+        product_total_purchases=get(prod_row, "product_total_purchases"),
+        product_view_to_cart_rate=get(prod_row, "product_view_to_cart_rate"),
+        product_cart_to_purchase_rate=get(prod_row, "product_cart_to_purchase_rate"),
+        product_unique_buyers=get(prod_row, "product_unique_buyers"),
+        brand_purchase_rate=get(prod_row, "brand_purchase_rate"),
+        price_vs_user_avg=get(prod_row, "price_vs_user_avg"),
+        price_vs_category_avg=get(prod_row, "price_vs_category_avg"),
+        brand=get_str(prod_row, "brand"),
+        category_code_level1=get_str(prod_row, "category_code_level1"),
+        category_code_level2=get_str(prod_row, "category_code_level2"),
     )
 
 
