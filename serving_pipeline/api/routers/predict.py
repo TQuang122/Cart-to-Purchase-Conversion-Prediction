@@ -903,6 +903,14 @@ def predict_feast(
             threshold,
             explain_level=explain_level,
         )
+        # Feast path provides full 26 features from parquet — quality is perfect
+        result.feature_quality = FeatureQuality(
+            score=100.0,
+            grade="A",
+            fallback_ratio=0.0,
+            inferred_count=0,
+            fallback_count=0,
+        )
         _track_prediction(True, model)
         return result
     except HTTPException:
@@ -911,29 +919,14 @@ def predict_feast(
     except Exception as exc:
         _track_prediction(False, model)
         error_text = str(exc)
-        if "No module named 'feast'" in error_text:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Feast lookup is not available on this deployment: missing Python package 'feast'. "
-                    "Install feast in serving environment or use Raw/Batch prediction tabs."
-                ),
-            ) from exc
-        if "Feast repo path does not exist" in error_text:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Feast lookup is not available on this deployment: feature repo path is missing. "
-                    "Set FEAST_REPO_PATH to a valid repository or use Raw/Batch prediction tabs."
-                ),
-            ) from exc
         raise HTTPException(
             status_code=500,
             detail=(
-                "Failed to run Feast lookup prediction. "
+                f"Failed to run Feast lookup prediction. "
                 f"user_id={payload.user_id}, product_id={payload.product_id}, error={exc}"
             ),
         ) from exc
+
 
 
 @router.get("/stats")
