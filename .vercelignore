@@ -1,0 +1,40 @@
+# Exclude Python backend and infrastructure from Vercel frontend build
+
+# Python backend
+serving_pipeline/api/
+serving_pipeline/requirements.txt
+serving_pipeline/render.yaml
+serving_pipeline/models/*.parquet
+serving_pipeline/models/*.joblib
+serving_pipeline/models/encoders.json
+serving_pipeline/models/precompute_*.py
+serving_pipeline/models/feast_repo/
+
+# Root Python files
+*.py
+requirements.txt
+runtime.txt
+setup.py
+pyproject.toml
+
+# Infrastructure
+infra/
+data_pipeline/
+model_pipeline/
+
+# Python artifacts
+__pycache__/
+*.egg-info/
+*.egg
+*.db
+
+# Docs and misc
+*.md
+papers/
+*.log
+
+# Hidden
+.claude/
+.sisyphus/
+catboost_info/
+mlflow.db

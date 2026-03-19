@@ -1,0 +1,42 @@
+# Exclude Python backend and infrastructure from frontend build
+# Vercel should only build the React frontend, not Python dependencies
+
+# Backend (Python)
+../api/
+../models/
+../requirements.txt
+../render.yaml
+../**/*.py
+../**/__pycache__/
+../**/*.egg-info/
+
+# Infrastructure
+../infra/
+../data_pipeline/
+../model_pipeline/
+
+# Build artifacts
+../dist/
+../*.db
+../*.egg
+../*.whl
+
+# Hidden files
+../.gitignore
+../.DS_Store
+../*.log
+
+# Documentation
+../*.md
+../papers/
+
+# IDE
+../.vscode/
+../.idea/
+../.claude/
+../.sisyphus/
+
+# Env files (don't expose)
+../**/.env
+../**/.env.*
+../!.env.example

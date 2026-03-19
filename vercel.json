@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd serving_pipeline/react-ui && npm install && npm run build",
+  "outputDirectory": "serving_pipeline/react-ui/dist",
+  "installCommand": "cd serving_pipeline/react-ui && npm install",
+  "framework": null,
+  "rewrites": []
+}
