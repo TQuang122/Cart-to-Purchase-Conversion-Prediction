@@ -27,11 +27,11 @@ We formulate cart-to-purchase conversion as a conditional prediction problem, wh
 
 ## 🎯 Overview
 
-This project implements a complete MLOps pipeline for **customer churn prediction**, covering the entire machine learning lifecycle:
+This project implements a complete MLOps pipeline for **cart-to-purchase conversion prediction**, covering the entire machine learning lifecycle:
 
-- **Data Pipeline**: Version-controlled data with DVC, feature engineering with Feast, and Redis-backed online feature serving
+- **Data Pipeline**: Version-controlled data with DVC, feature engineering with Feast, and Parquet-based feature lookup (Feast-compatible)
 - **Model Pipeline**: XGBoost model training with MLflow experiment tracking, model registry, and automated evaluation
-- **Serving Pipeline**: FastAPI-based prediction service with Gradio UI and monitoring integration
+- **Serving Pipeline**: FastAPI-based prediction service with React 19 UI and monitoring integration
 - **Infrastructure**: Kubernetes and Docker orchestration for PostgreSQL, MinIO, MLflow, Kafka, Airflow, and monitoring stack
 
 The system is designed for scalability, reproducibility, and production deployment.
@@ -77,69 +77,85 @@ The core modeling task is to predict whether a product added to a shopping cart 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      MLOps Infrastructure                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────────┐      ┌──────────────────┐                │
-│  │  Data Pipeline    │      │  Model Pipeline  │                │
-│  ├───────────────────┤      ├──────────────────┤                │
-│  │ • DVC (S3/MinIO)  │      │ • MLflow Track   │                │
-│  │ • Feast Features  │─────▶│ • XGBoost Model  │                │
-│  │ • Redis Online    │      │ • Model Registry │                │
-│  └───────────────────┘      └────────┬─────────┘                │
-│           │                          │                          │
-│           │                          ▼                          │
-│           │                  ┌──────────────────┐               │
-│           └─────────────────▶│ Serving Pipeline │               │
-│                              ├──────────────────┤               │
-│                              │ • FastAPI        │               │
-│                              │ • Gradio UI      │               │
-│                              │ • Monitoring     │               │
-│                              └──────────────────┘               │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │              Infrastructure Services                       │ │
-│  ├────────────────────────────────────────────────────────────┤ │
-│  │ PostgreSQL | MinIO | MLflow | Kafka | Airflow | Monitoring │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-``` 
-
-## Gemini Chatbot Setup
-
-The React chatbot widget uses the backend endpoint `POST /chat`, and the backend calls Gemini securely with a server-side key.
-
-1. Set your key in the backend environment:
-
-```bash
-export GEMINI_API_KEY="your_new_gemini_api_key"
-# Optional: force a specific model if needed
-export GEMINI_MODEL="gemini-2.5-flash"
+┌──────────────────────────────────────────────────────────────┐
+│              Hybrid Deployment (Local + Cloudflare)           │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│   ┌─────────────────┐         HTTPS (Cloudflare Tunnel)       │
+│   │  Vercel (FE)   │  ──── or ────  Local npm run dev      │
+│   │  React 19 + UI  │                                       │
+│   └────────┬────────┘                                       │
+│            │                                               │
+│            │ VITE_API_BASE_URL ───────────────────────────────┤
+│            ▼                                               │
+│   ┌─────────────────────────────────────────────────────┐    │
+│   │  cloudflared tunnel  ──── free, no static IP        │    │
+│   └────────────────────┬────────────────────────────────┘    │
+│                        │ (localhost)                          │
+│   ┌────────────────────▼────────────────────────────────┐    │
+│   │  FastAPI (uvicorn :8000)  — XGBoost model          │    │
+│   │  • /predict/*  • /dataset/*  • /model/*             │    │
+│   └────────────────────┬────────────────────────────────┘    │
+│                        │ (localhost)                          │
+│   ┌────────────────────▼────────────────────────────────┐    │
+│   │          Local Infrastructure (Docker)                │    │
+│   │  MLflow :5000  |  MinIO :9000  |  MySQL :3306     │    │
+│   │  Kafka :9092   |  Airflow :8090                    │    │
+│   │  ./infra/docker/run.sh up                           │    │
+│   └────────────────────────────────────────────────────┘    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-2. Prepare backend runtime (required before serving):
+## 🚀 Quick Start
+
+### 1. Start infrastructure
 
 ```bash
-# Recommended: use the project serving env
+./infra/docker/run.sh up        # MLflow, MinIO, MySQL, Kafka, Airflow
+```
+
+### 2. Start backend
+
+```bash
+cd serving_pipeline
 conda activate propensity_mlops
-
-cd serving_pipeline
-python -m pip install -r requirements.txt
-```
-
-3. Start backend API:
-
-```bash
-cd serving_pipeline
 uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
-4. Start frontend:
+### 3. Expose to internet (optional — for Vercel frontend)
 
 ```bash
+# Terminal 2: Start Cloudflare Tunnel
+chmod +x infra/cloudflare-tunnel/start-tunnel.sh
+./infra/cloudflare-tunnel/start-tunnel.sh 8000
+
+# Copy the tunnel URL, then set it in frontend:
 cd serving_pipeline/react-ui
+echo "VITE_API_BASE_URL=https://YOUR-TUNNEL-URL" > .env.local
 npm run dev
 ```
 
-Security note: do not place Gemini keys in frontend code or commit them to the repository.
+### 4. Deploy frontend to Vercel
+
+```bash
+cd serving_pipeline/react-ui
+vercel env add VITE_API_BASE_URL
+# Enter your Cloudflare Tunnel URL (e.g. https://abc123.trycloudflare.com)
+vercel --prod
+```
+
+For full setup docs, see [infra/cloudflare-tunnel/README.md](infra/cloudflare-tunnel/README.md).
+
+
+## 🔑 Gemini API Setup (optional)
+
+The React chatbot uses `POST /chat`, and the backend calls Gemini securely.
+
+```bash
+# In your shell profile or .env
+export GEMINI_API_KEY="your_key_here"
+export GEMINI_MODEL="gemini-2.5-flash"   # optional
+```
+
+Do NOT commit keys to the repository.
