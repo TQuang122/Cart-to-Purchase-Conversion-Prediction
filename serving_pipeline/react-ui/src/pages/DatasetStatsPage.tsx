@@ -266,7 +266,7 @@ function HorizontalBarChartCard({
 
 export function DatasetStatsPage() {
   const [searchParams] = useSearchParams()
-  const apiBaseUrl = searchParams.get('api') || 'http://127.0.0.1:8000'
+  const apiBaseUrl = searchParams.get('api') || (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000')
   const apiRoot = apiBaseUrl.replace(/\/predict\/?$/, '')
   const selectedModel = 'xgboost'
 

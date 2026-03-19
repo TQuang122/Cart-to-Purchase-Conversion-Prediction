@@ -36,6 +36,8 @@ try:
 except Exception:
     yaml = None
 
+import os
+os.environ.setdefault("MLFLOW_REQUEST_TIMEOUT", "3")
 router = APIRouter(prefix="/model", tags=["model"])
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
