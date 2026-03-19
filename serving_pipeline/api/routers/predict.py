@@ -1,10 +1,4 @@
-#WW|# """
-#HP|# Prediction router — loads XGBoost model from local disk.
-#HP|# No MLflow required. No random. All predictions are deterministic.
-#PK|# Model + encoders are committed to serving_pipeline/models/.
-#YB|# """
-#MY|# // 2026-03-19: trigger Render redeploy
-#MY|#
+# """
 # Prediction router — loads XGBoost model from local disk.
 # No MLflow required. No random. All predictions are deterministic.
 # Model + encoders are committed to serving_pipeline/models/.
@@ -88,6 +82,13 @@ NUMERICAL_FEATURES = [
     "price_vs_category_avg",
 ]
 CATEGORICAL_FEATURES = ["brand", "category_code_level1", "category_code_level2"]
+
+
+# Precomputed feature lookups (populated at startup via precompute script)
+_USER_FEATURES_PATH = _MODELS_DIR / "user_features.parquet"
+_PRODUCT_FEATURES_PATH = _MODELS_DIR / "product_features.parquet"
+_user_features_df: pd.DataFrame | None = None
+_product_features_df: pd.DataFrame | None = None
 ALL_FEATURES = NUMERICAL_FEATURES + CATEGORICAL_FEATURES
 
 FEAST_FEATURE_REFS = [
@@ -120,12 +121,6 @@ FEATURE_COLUMNS_LITE = [
     "category_code_level1",
     "category_code_level2",
 ]
-
-# Precomputed feature lookups (populated at startup via precompute script)
-_USER_FEATURES_PATH = _MODELS_DIR / "user_features.parquet"
-_PRODUCT_FEATURES_PATH = _MODELS_DIR / "product_features.parquet"
-_user_features_df: pd.DataFrame | None = None
-_product_features_df: pd.DataFrame | None = None
 
 # ─────────────────────────────────────────────────────────────────
 # Model loading (done once at import time — local disk)
@@ -243,17 +238,6 @@ def _get_feast_store() -> Any:
         raise RuntimeError(_feast_init_error) from exc
 
 
-def _load_feature_lookups() -> None:
-    """Load precomputed user/product feature lookups at startup."""
-    global _user_features_df, _product_features_df
-    if _user_features_df is None and _USER_FEATURES_PATH.exists():
-        print(f"[predict] Loading user features from {_USER_FEATURES_PATH}")
-        _user_features_df = pd.read_parquet(_USER_FEATURES_PATH)
-        print(f"[predict] Loaded {len(_user_features_df):,} user rows")
-    if _product_features_df is None and _PRODUCT_FEATURES_PATH.exists():
-        print(f"[predict] Loading product features from {_PRODUCT_FEATURES_PATH}")
-        _product_features_df = pd.read_parquet(_PRODUCT_FEATURES_PATH)
-        print(f"[predict] Loaded {len(_product_features_df):,} product rows")
 def _resolve_entity_key(raw_value: str) -> int | str:
     value = raw_value.strip()
     if not value:
@@ -317,6 +301,18 @@ def _to_str(value: Any, default: str = "unknown") -> str:
     return text if text else default
 
 
+def _load_feature_lookups() -> None:
+    """Load precomputed user/product feature lookups at startup."""
+    global _user_features_df, _product_features_df
+    if _user_features_df is None and _USER_FEATURES_PATH.exists():
+        print(f"[predict] Loading user features from {_USER_FEATURES_PATH}")
+        _user_features_df = pd.read_parquet(_USER_FEATURES_PATH)
+        print(f"[predict] Loaded {len(_user_features_df):,} user rows")
+    if _product_features_df is None and _PRODUCT_FEATURES_PATH.exists():
+        print(f"[predict] Loading product features from {_PRODUCT_FEATURES_PATH}")
+        _product_features_df = pd.read_parquet(_PRODUCT_FEATURES_PATH)
+        print(f"[predict] Loaded {len(_product_features_df):,} product rows")
+
 
 def _fetch_raw_from_feast(payload: CartInputFeast) -> CartInputRaw:
     """Fetch features using precomputed parquet lookups (no Feast/Redis needed)."""
@@ -361,8 +357,8 @@ def _fetch_raw_from_feast(payload: CartInputFeast) -> CartInputRaw:
     return CartInputRaw(
         price=get(prod_row, "price"),
         activity_count=get(prod_row, "activity_count"),
-        MH|        event_weekday=int(get(user_row, 'event_weekday', 0)),
-        PS|        event_hour=int(get(user_row, 'event_hour', 12)),
+        event_weekday=int(get(user_row, "event_weekday", 0)),
+        event_hour=int(get(user_row, "event_hour", 12)),
         user_total_events=get(user_row, "user_total_events"),
         user_total_views=get(user_row, "user_total_views"),
         user_total_carts=get(user_row, "user_total_carts"),
@@ -386,7 +382,6 @@ def _fetch_raw_from_feast(payload: CartInputFeast) -> CartInputRaw:
         category_code_level1=get_str(prod_row, "category_code_level1"),
         category_code_level2=get_str(prod_row, "category_code_level2"),
     )
-
 
 def _record_quality(quality: FeatureQuality) -> None:
     _quality_history.append(
