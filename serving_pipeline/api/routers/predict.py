@@ -1,4 +1,10 @@
-# """
+#WW|# """
+#HP|# Prediction router — loads XGBoost model from local disk.
+#HP|# No MLflow required. No random. All predictions are deterministic.
+#PK|# Model + encoders are committed to serving_pipeline/models/.
+#YB|# """
+#MY|# // 2026-03-19: trigger Render redeploy
+#MY|#
 # Prediction router — loads XGBoost model from local disk.
 # No MLflow required. No random. All predictions are deterministic.
 # Model + encoders are committed to serving_pipeline/models/.
