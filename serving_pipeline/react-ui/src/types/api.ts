@@ -1,4 +1,4 @@
-export type ServingModel = 'xgboost' | 'lightgbm' | 'catboost'
+export type ServingModel = 'xgboost'
 
 export interface CartInputRaw {
   price: number

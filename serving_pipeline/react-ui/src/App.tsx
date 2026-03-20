@@ -164,7 +164,7 @@ function App() {
                     to="/dataset"
                     className="inline-flex items-center rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-[hsl(var(--interactive)/0.48)]"
                   >
-                    Insides Dashboard
+                    Dataset Explorer
                   </Link>
                   <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
                     {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}

@@ -260,8 +260,6 @@ export function DashboardHeader({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="xgboost">XGBoost</SelectItem>
-                  <SelectItem value="lightgbm">LightGBM</SelectItem>
-                  <SelectItem value="catboost">CatBoost</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -327,8 +325,6 @@ export function DashboardHeader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="xgboost">XGBoost</SelectItem>
-                <SelectItem value="lightgbm">LightGBM</SelectItem>
-                <SelectItem value="catboost">CatBoost</SelectItem>
               </SelectContent>
             </Select>
             <div className="min-w-[224px] rounded-lg border border-border/70 bg-surface-2/88 px-3 py-2.5">
