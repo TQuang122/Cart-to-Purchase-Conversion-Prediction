@@ -1,5 +1,6 @@
 """
 Docstring for model_pipeline.src.scripts.train
+Supports: XGBoost, LightGBM, CatBoost, TabICL
 """
 
 from pathlib import Path
@@ -14,20 +15,23 @@ from loguru import logger
 import mlflow
 
 from src.mlflow_utils.experiment_tracker import ExperimentTracker
-from src.model.xgboost_trainer import GenericBinaryClassifierTrainer
+from src.model.xgboost_trainer import GenericBinaryClassifierTrainer, TABICL_AVAILABLE
 from src.utility.helper import load_config
 
-os.environ["AWS_ACCESS_KEY_ID"] = "minio"
-os.environ["AWS_SECRET_ACCESS_KEY"] = "minio123"
-os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
-os.environ["MLFLOW_S3_ENDPOINT_URL"] = os.environ.get(
-    "MLFLOW_S3_ENDPOINT_URL",
-    "http://minio:9000",
-)
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Train XGBoost model")
+#YQ|os.environ["AWS_ACCESS_KEY_ID"] = "minio"
+#BY|os.environ["AWS_SECRET_ACCESS_KEY"] = "minio123"
+#WH|os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+#SM|os.environ["MLFLOW_S3_ENDPOINT_URL"] = os.environ.get(
+#RW|    "MLFLOW_S3_ENDPOINT_URL",
+#SZ|    "http://minio:9000",
+#TK|)
+#HQ|os.environ["MLFLOW_TRACKING_URI"] = os.environ.get(
+#YQ|    "MLFLOW_TRACKING_URI",
+#NV|    "http://localhost:5000",
+#MX|)
+#TX|
+#KW|def main():
+    parser = argparse.ArgumentParser(description="Train ML model")
     parser.add_argument(
         "--config",
         type=str,
@@ -62,18 +66,30 @@ def main():
         help="Path to HPO best params JSON file",
     )
 
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=None,
+        help="Number of rows to sample (for TabICL - recommended: 50K-75K)",
+    )
+
     args = parser.parse_args()
 
     logger.info("Loading configuration...")
     config = load_config(args.config)
 
-    # Load HPO best params if provided
-    if args.best_params_path:
+    model_type = config["model"]["model_type"]
+
+    # Check TabICL availability
+    if model_type == "tabicl" and not TABICL_AVAILABLE:
+        raise ImportError("TabICL is not installed. Install with: pip install tabicl")
+
+    # Load HPO best params if provided (skip for TabICL - no HPO needed)
+    if args.best_params_path and model_type != "tabicl":
         best_params_path = Path(args.best_params_path)
         if best_params_path.exists():
             with open(best_params_path) as f:
                 best_params = json.load(f)
-            # Merge with config parameters
             config["model"]["parameters"].update(best_params)
             logger.info(
                 f"Loaded HPO best params from {args.best_params_path}: {best_params}"
@@ -83,6 +99,7 @@ def main():
         config["mlflow"]["experiment_name"] = args.experiment_name
 
     logger.info(f"Experiment name: {config['mlflow']['experiment_name']}")
+    logger.info(f"Model type: {model_type}")
 
     logger.info("Initializing MLflow experiment tracker...")
     tracker = ExperimentTracker(
@@ -106,42 +123,68 @@ def main():
         )
     logger.info(f"Loaded {len(data)} samples with {len(data.columns)} features")
 
+    # Sample data if specified (recommended for TabICL)
+    if args.sample_size and args.sample_size < len(data):
+        logger.info(f"Sampling {args.sample_size:,} rows from {len(data):,} rows")
+        data = data.sample(n=args.sample_size, random_state=42).reset_index(drop=True)
+        logger.info(f"Sampled dataset shape: {data.shape}")
+
     raw_data = data.copy()
 
-    # Target encoding for categorical columns
-    target_col = config["features"]["target_column"]
-    feature_cols = config["features"]["training_features"]
-    cols_to_encode = data.select_dtypes(include=["object", "category"]).columns.tolist()
-    global_mean = data[target_col].mean() if target_col in data.columns else 0.26
-    SMOOTHING = 20  # smoothing factor for target encoding
+    # TabICL handles categorical features automatically - no target encoding needed
+    # For other models, use target encoding
+    if model_type == "tabicl":
+        # TabICL: no encoding needed, keep raw data
+        target_col = config["features"]["target_column"]
+        feature_cols = config["features"]["training_features"]
+        encoders = {}
+        # Remove datetime columns
+        datetime_cols = []
+        for col in feature_cols:
+            if "datetime" in str(data[col].dtype):
+                datetime_cols.append(col)
+        feature_cols = [col for col in feature_cols if col not in datetime_cols]
+        logger.info(f"Removed datetime columns: {datetime_cols}")
+    else:
+        # XGBoost/LightGBM/CatBoost: target encoding
+        target_col = config["features"]["target_column"]
+        feature_cols = config["features"]["training_features"]
 
-    # Initialize encoders dict for target encoding
-    encoders = {}
+        # Handle datetime columns
+        datetime_cols = []
+        for col in feature_cols:
+            if col in data.columns and "datetime" in str(data[col].dtype):
+                datetime_cols.append(col)
+        feature_cols = [col for col in feature_cols if col not in datetime_cols]
 
-    # Target encoding: encode categorical by mean of target (purchase rate)
-    # This captures brand affinity better than ordinal LabelEncoder
-    for col in cols_to_encode:
-        logger.info(f"Target encoding column: {col}")
-        # Calculate target mean per category with smoothing
-        group_stats = data.groupby(col)[target_col].agg(["mean", "count"])
-        smoothed_means = (
-            group_stats["count"] * group_stats["mean"] + SMOOTHING * global_mean
-        ) / (group_stats["count"] + SMOOTHING)
-        # Encode with smoothed target mean (float)
-        data[col] = data[col].map(smoothed_means).fillna(global_mean)
-        # Store mapping for serving (category -> target_mean)
-        encoders[col] = {
-            "mapping": smoothed_means.to_dict(),
-            "global_mean": global_mean,
-        }
+        cols_to_encode = (
+            data[feature_cols]
+            .select_dtypes(include=["object", "category"])
+            .columns.tolist()
+        )
+        global_mean = data[target_col].mean() if target_col in data.columns else 0.26
+        SMOOTHING = 20
 
-    target_encoder = None  # target column not used for features
+        encoders = {}
+        for col in cols_to_encode:
+            logger.info(f"Target encoding column: {col}")
+            group_stats = data.groupby(col)[target_col].agg(["mean", "count"])
+            smoothed_means = (
+                group_stats["count"] * group_stats["mean"] + SMOOTHING * global_mean
+            ) / (group_stats["count"] + SMOOTHING)
+            data[col] = data[col].map(smoothed_means).fillna(global_mean)
+            encoders[col] = {
+                "mapping": smoothed_means.to_dict(),
+                "global_mean": global_mean,
+            }
+
+    target_encoder = None
     feature_encoders = encoders
 
     trainer = GenericBinaryClassifierTrainer(
         config=config["model"],
         experiment_tracker=tracker,
-        model_type=config["model"]["model_type"],
+        model_type=model_type,
     )
 
     tags: dict = config["mlflow"]["tags"]
@@ -160,6 +203,18 @@ def main():
         )
 
         train_params = config["model"]["parameters"]
+
+        # Auto-detect device for TabICL: fall back to CPU if CUDA unavailable
+        if model_type == "tabicl" and train_params.get("device") == "cuda":
+            try:
+                import torch
+                if not torch.cuda.is_available():
+                    logger.warning("CUDA not available, falling back to device='cpu' for TabICL")
+                    train_params["device"] = "cpu"
+            except ImportError:
+                logger.warning("PyTorch not found, falling back to device='cpu' for TabICL")
+                train_params["device"] = "cpu"
+
         logger.info(f"Training with params: {train_params}")
         trainer.train(
             X_train=dtrain,
@@ -177,13 +232,11 @@ def main():
         )
 
         # Log encoder classes as artifact so serving can rebuild TargetEncoders
-        # feature_encoders now contains: {col: {'mapping': {category: target_mean}, 'global_mean': float}}
         encoder_classes = {}
         for col, encoder_info in feature_encoders.items():
             if isinstance(encoder_info, dict) and "mapping" in encoder_info:
                 encoder_classes[col] = encoder_info
             else:
-                # Fallback for legacy LabelEncoder format
                 encoder_classes[col] = {
                     "classes": encoder_info.classes_.tolist()
                     if hasattr(encoder_info, "classes_")

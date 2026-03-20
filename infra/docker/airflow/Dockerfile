@@ -2,9 +2,9 @@ FROM apache/airflow:3.1.1rc1-python3.11
 
 USER root
 
-# Java for Spark
+# Java for Spark + libgomp1 for LightGBM/CatBoost
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openjdk-17-jre-headless \
+    && apt-get install -y --no-install-recommends openjdk-17-jre-headless libgomp1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

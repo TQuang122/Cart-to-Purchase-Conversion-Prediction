@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: mlops
+  labels:
+    app: airflow-webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-webserver
+  template:
+    metadata:
+      labels:
+        app: airflow-webserver
+    spec:
+      serviceAccountName: airflow
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h airflow-postgres -U airflow; do
+            echo "Waiting for database..."
+            sleep 2
+          done
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: airflow-secret
+              key: POSTGRES_PASSWORD
+      - name: setup-airflow
+        image: apache/airflow:2.8.1-python3.11
+        command:
+        - bash
+        - -c
+        - |
+          # Copy image's airflow.cfg if not present
+          if [ ! -f /opt/airflow/airflow.cfg ]; then
+            cp /usr/local/airflow/airflow.cfg /opt/airflow/airflow.cfg 2>/dev/null || \
+            cp /airflow.cfg /opt/airflow/airflow.cfg 2>/dev/null || true
+          fi
+          # Create symlinks for logs and dags
+          mkdir -p /opt/airflow/logs /opt/airflow/dags
+          ln -snf /logs-pvc /opt/airflow/logs 2>/dev/null || true
+          ln -snf /dags-pvc /opt/airflow/dags 2>/dev/null || true
+          # Ensure logs dir permissions
+          chmod 777 /opt/airflow/logs 2>/dev/null || true
+          # Copy passwords file
+          cp /tmp/passwords-ro/simple_auth_manager_passwords.json.generated /opt/airflow/simple_auth_manager_passwords.json.generated 2>/dev/null || true
+          chmod 644 /opt/airflow/simple_auth_manager_passwords.json.generated 2>/dev/null || true
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: airflow-home
+          mountPath: /opt/airflow
+        - name: logs
+          mountPath: /logs-pvc
+        - name: dags
+          mountPath: /dags-pvc
+        - name: passwords-ro
+          mountPath: /tmp/passwords-ro
+      - name: init-db
+        image: apache/airflow:2.8.1-python3.11
+        command:
+        - bash
+        - -c
+        - |
+          airflow db migrate
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        - secretRef:
+            name: airflow-secret
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://airflow:airflow123@airflow-postgres:5432/airflow"
+        volumeMounts:
+        - name: airflow-home
+          mountPath: /opt/airflow
+      containers:
+      - name: webserver
+        image: apache/airflow:2.8.1-python3.11
+        command: ["airflow", "webserver"]
+        ports:
+        - containerPort: 8080
+          name: http
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        - secretRef:
+            name: airflow-secret
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://airflow:airflow123@airflow-postgres:5432/airflow"
+        volumeMounts:
+        - name: airflow-home
+          mountPath: /opt/airflow
+        - name: logs
+          mountPath: /opt/airflow/logs
+        - name: passwords-rw
+          mountPath: /opt/airflow/simple_auth_manager_passwords.json.generated
+          subPath: simple_auth_manager_passwords.json.generated
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: airflow-home
+        persistentVolumeClaim:
+          claimName: airflow-dags-pvc
+      - name: logs
+        persistentVolumeClaim:
+          claimName: airflow-logs-pvc
+      - name: dags
+        persistentVolumeClaim:
+          claimName: airflow-dags-pvc
+      - name: passwords-ro
+        secret:
+          secretName: airflow-passwords
+          defaultMode: 0644
+      - name: passwords-rw
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: mlops
+  labels:
+    app: airflow-webserver
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: airflow-webserver

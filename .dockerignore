@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.eggs
+dist
+build
+
+# ML
+model_pipeline/data
+model_pipeline/logs
+model_pipeline/notebook
+model_pipeline/.ipynb_checkpoints
+model_pipeline/src/__pycache__
+model_pipeline/src/test
+
+# Frontend
+serving_pipeline/react-ui/node_modules
+serving_pipeline/react-ui/dist
+serving_pipeline/react-ui/.env
+serving_pipeline/react-ui/.env.local
+serving_pipeline/react-ui/playwright-report
+serving_pipeline/react-ui/test-results
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docs
+*.md
+!requirements.txt
+
+# Temp
+*.log
+tmp/
+temp/
+.env
+.env.*
+
+# DVC
+.dvc
+.dvcignore
+
+# MLflow outputs
+mlruns/
+mlartifacts/

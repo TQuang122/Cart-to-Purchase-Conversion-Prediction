@@ -1,0 +1,77 @@
+# =============================================================================
+# Dockerfile for Cart-to-Purchase Serving API
+# Multi-stage build for smaller final image
+#
+# IMPORTANT: python_model.pkl from MinIO uses cloudpickle serialization
+# referencing src.model.xgboost_trainer. We include model_pipeline/src/ so
+# cloudpickle can resolve the class at unpickle time.
+# =============================================================================
+
+FROM python:3.10-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps (--user puts packages in /root/.local)
+COPY serving_pipeline/requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# =============================================================================
+# Final stage
+# =============================================================================
+FROM python:3.10-slim
+
+LABEL maintainer="MLOps Team"
+LABEL description="Cart-to-Purchase Conversion Prediction Serving API"
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder (installed as --user in /root/.local)
+# Containers run as root via securityContext: runAsUser: 0
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+# Copy serving app source
+COPY serving_pipeline/api ./api
+COPY serving_pipeline/chatbot_function.py .
+COPY serving_pipeline/css.py .
+COPY serving_pipeline/predict_func.py .
+COPY serving_pipeline/show_chart.py .
+COPY serving_pipeline/upload_csv_func.py .
+COPY serving_pipeline/runtime.txt .
+
+# Copy ML model_pipeline source code
+# Required for cloudpickle unpickling of python_model.pkl (PythonModelWrapper)
+COPY model_pipeline/src /app/src
+
+# Copy pre-built feature parquet files (already committed to repo)
+COPY serving_pipeline/models/user_features.parquet /src_models/
+COPY serving_pipeline/models/product_features.parquet /src_models/
+COPY serving_pipeline/models/feast_repo /src_models/feast_repo
+
+# Copy init script (download model from MinIO at startup)
+COPY infra/k8s/serving/download_model.py /download_model.py
+
+# Environment defaults
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app:/root/.local/lib/python3.10/site-packages
+
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command (runs as root — set by securityContext in K8s deployment)
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

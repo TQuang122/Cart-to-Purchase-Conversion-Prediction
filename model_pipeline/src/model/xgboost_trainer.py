@@ -16,6 +16,16 @@ from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
 from loguru import logger
 
+# Try to import TabICL - optional dependency
+try:
+    from tabicl import TabICLClassifier
+
+    TABICL_AVAILABLE = True
+except ImportError:
+    TABICL_AVAILABLE = False
+    TabICLClassifier = None
+    logger.warning("TabICL not available. Install with: pip install tabicl")
+
 from src.mlflow_utils.experiment_tracker import ExperimentTracker
 
 
@@ -39,18 +49,20 @@ class BinaryClassifierWrapper(mlflow.pyfunc.PythonModel):
     def predict(self, context, model_input, params=None):
         df = model_input.copy()
 
-        for col, encoder in self.feature_encoders.items():
-            if col in df.columns:
-                if isinstance(encoder, dict) and "mapping" in encoder:
-                    mapping = encoder["mapping"]
-                    global_mean = encoder.get("global_mean", 0.26)
-                    df[col] = (
-                        df[col]
-                        .astype(str)
-                        .map(lambda x: mapping.get(x.strip(), global_mean))
-                    )
-                else:
-                    df[col] = encoder.transform(df[col].astype(str))
+        # For TabICL, we don't need feature encoding - it handles categoricals automatically
+        if self.model_type != "tabicl":
+            for col, encoder in self.feature_encoders.items():
+                if col in df.columns:
+                    if isinstance(encoder, dict) and "mapping" in encoder:
+                        mapping = encoder["mapping"]
+                        global_mean = encoder.get("global_mean", 0.26)
+                        df[col] = (
+                            df[col]
+                            .astype(str)
+                            .map(lambda x: mapping.get(x.strip(), global_mean))
+                        )
+                    else:
+                        df[col] = encoder.transform(df[col].astype(str))
 
         X = df[self.feature_names]
 
@@ -88,6 +100,7 @@ class GenericBinaryClassifierTrainer:
         "xgboost": XGBClassifier,
         "lightgbm": LGBMClassifier,
         "catboost": CatBoostClassifier,
+        "tabicl": TabICLClassifier,  # TabICL - tabular foundation model
     }
 
     # Parameters to filter out - includes deprecated + model-specific params
@@ -116,6 +129,13 @@ class GenericBinaryClassifierTrainer:
             "random_state",
             "subsample_freq",
         ],
+        "tabicl": [
+            # TabICL doesn't use these traditional ML parameters
+            "n_jobs",
+            "objective",
+            "eval_metric",
+            "early_stopping_rounds",
+        ],
     }
 
     def __init__(
@@ -125,6 +145,12 @@ class GenericBinaryClassifierTrainer:
             raise ValueError(
                 f"model_type must be one of {list(self.SUPPORTED_MODELS.keys())}, "
                 f"got '{model_type}'"
+            )
+
+        # Special handling for TabICL
+        if model_type == "tabicl" and not TABICL_AVAILABLE:
+            raise ImportError(
+                "TabICL is not installed. Install with: pip install tabicl"
             )
 
         self.config = config
@@ -257,6 +283,14 @@ class GenericBinaryClassifierTrainer:
                 importance_dict = dict(
                     zip(self.feature_names, self.model.feature_importances_)
                 )
+        elif self.model_type == "tabicl":
+            # TabICL doesn't have feature importance like gradient boosting models
+            # Log a note instead
+            logger.info(
+                "TabICL does not support feature importance - using in-context learning"
+            )
+            self.tracker.log_metric("feature_importance_note", 0.0)
+            return
 
         if importance_dict:
             sorted_importance = sorted(

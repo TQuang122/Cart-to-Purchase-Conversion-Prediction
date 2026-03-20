@@ -30,6 +30,9 @@ packaging>=25.0,<26.0
 # Hyperparameter Optimization
 optuna>=3.5.0,<5.0.0
 
-#XP|# Gradient Boosting Models
-#LG#lightgbm>=4.0.0,<5.0.0
-#CB#catboost>=1.2.0,<2.0.0
+# Gradient Boosting Models
+lightgbm>=4.0.0,<5.0.0
+catboost>=1.2.0,<2.0.0
+
+# TabICL - Tabular Foundation Model
+tabicl>=2.0.0

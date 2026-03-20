@@ -26,3 +26,4 @@ wheels/
 #HK|*.db
 #VJ|# Data files
 #YM|model_pipeline/src/data/*.csv
+.vercel

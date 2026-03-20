@@ -1,0 +1,61 @@
+# Job to sync repo files into the Airflow PVC for DAG execution
+# Usage: kubectl apply -f infra/k8s/airflow/sync-repo-job.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: airflow-sync-repo
+  namespace: mlops
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: sync
+      image: busybox:latest
+      command:
+        - sh
+        - -c
+        - |
+          echo "Syncing DAG files..."
+          mkdir -p /data/infra/k8s/airflow/dags
+          mkdir -p /data/model_pipeline/src/scripts
+          mkdir -p /data/model_pipeline/src/config
+          mkdir -p /data/model_pipeline/src/mlflow_utils
+          mkdir -p /data/model_pipeline/src/model
+          mkdir -p /data/model_pipeline/src/utility
+          mkdir -p /data/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data
+
+          # Copy DAG
+          echo "Copying DAG..."
+          cp /src/infra/k8s/airflow/dags/*.py /data/infra/k8s/airflow/dags/ 2>/dev/null || echo "No DAG files found"
+
+          # Copy scripts
+          echo "Copying scripts..."
+          cp /src/model_pipeline/src/scripts/*.py /data/model_pipeline/src/scripts/ 2>/dev/null || echo "No scripts found"
+          cp /src/model_pipeline/src/mlflow_utils/*.py /data/model_pipeline/src/mlflow_utils/ 2>/dev/null || echo "No mlflow_utils found"
+          cp /src/model_pipeline/src/model/*.py /data/model_pipeline/src/model/ 2>/dev/null || echo "No model files found"
+          cp /src/model_pipeline/src/utility/*.py /data/model_pipeline/src/utility/ 2>/dev/null || echo "No utility found"
+
+          # Copy config
+          cp /src/model_pipeline/src/config/*.yaml /data/model_pipeline/src/config/ 2>/dev/null || echo "No configs found"
+          cp /src/model_pipeline/pyproject.toml /data/ 2>/dev/null || echo "No pyproject.toml"
+          cp /src/model_pipeline/src/config/config_k8s.yaml /data/model_pipeline/src/config/ 2>/dev/null || true
+
+          # Copy training data (if exists locally)
+          cp /src/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/train.parquet /data/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/ 2>/dev/null || echo "Train data not found at source"
+          cp /src/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/test.parquet /data/data_pipeline/propensity_feature_store/propensity_features/feature_repo/data/ 2>/dev/null || echo "Test data not found"
+
+          echo "Sync complete!"
+          ls -la /data/
+          ls -la /data/model_pipeline/src/scripts/
+      volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: src
+          mountPath: /src
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: airflow-dags-pvc
+    - name: src
+      hostPath:
+        path: "/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction-wt-migrate-react"
+        type: Directory

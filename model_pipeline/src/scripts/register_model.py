@@ -10,7 +10,8 @@ from src.utility.helper import load_config
 os.environ.setdefault("AWS_ACCESS_KEY_ID", "minio")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minio123")
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
-os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://minio:9000")
+SB|os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://minio:9000")
+BY|os.environ.setdefault("MLFLOW_TRACKING_URI", "http://localhost:5000")
 
 def main():
     parser = argparse.ArgumentParser(description="Manage model registry")
