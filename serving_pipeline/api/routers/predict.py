@@ -17,6 +17,33 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
 from sklearn.preprocessing import LabelEncoder
 
+
+# MLflow configuration
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI", "http://mlflow.mlops.svc.cluster.local:5000"
+)
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "minio")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "minio123")
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+MLFLOW_S3_ENDPOINT_URL = os.getenv(
+    "MLFLOW_S3_ENDPOINT_URL", "http://minio.mlops.svc.cluster.local:9000"
+)
+os.environ.setdefault("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID)
+os.environ.setdefault("AWS_SECRET_ACCESS_KEY", AWS_SECRET_ACCESS_KEY)
+os.environ.setdefault("AWS_DEFAULT_REGION", AWS_DEFAULT_REGION)
+os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", MLFLOW_S3_ENDPOINT_URL)
+
+try:
+    import mlflow
+    import mlflow.pyfunc
+except Exception as mlflow_err:
+    mlflow = None
+    _mlflow_import_error = str(mlflow_err)
+else:
+    _mlflow_import_error = None
+
+
+
 from api.schemas import (
     CartInputFeast,
     CartInputRaw,
@@ -140,6 +167,158 @@ def _load_encoders() -> dict[str, Any]:
         return json.load(f)
 
 
+
+
+class _MLflowPyFuncWrapper:
+    """Wraps mlflow.pyfunc.PyFuncModel to expose sklearn-like .predict_proba().
+
+    BinaryClassifierWrapper.predict(context, model_input, params=None) has an awkward
+    signature that conflicts with MLflow PyFuncModel.predict(data, params=None):
+    - PyFuncModel passes (data, params) where 'data' maps to 'model_input'
+    - But 'params' kwarg then becomes an extra positional argument
+
+    Fix: access inner XGBClassifier via ._model._model and call predict_proba()
+    directly, applying the same encoding as BinaryClassifierWrapper.predict().
+    """
+
+    def __init__(self, pyfunc_model):
+        self._pyfunc = pyfunc_model
+
+    def _inner(self):
+        """Return the underlying XGBClassifier from BinaryClassifierWrapper."""
+        return self._pyfunc.model  # BinaryClassifierWrapper.model = XGBClassifier
+
+    def _encode(self, df):
+        """Apply same encoding as BinaryClassifierWrapper.predict()."""
+        # feature_encoders are on BinaryClassifierWrapper (self._pyfunc), not XGBClassifier
+        bc_wrapper = self._pyfunc
+        inner = self._inner()  # XGBClassifier
+        encoders = getattr(bc_wrapper, "feature_encoders", {})
+        feat_names = getattr(bc_wrapper, "feature_names", list(df.columns))
+        df = df.copy()
+        for col, encoder in encoders.items():
+            if col not in df.columns:
+                continue
+            if isinstance(encoder, dict) and "mapping" in encoder:
+                mapping = encoder["mapping"]
+                gm = encoder.get("global_mean", 0.26)
+                df[col] = df[col].astype(str).map(
+                    lambda x: mapping.get(x.strip(), gm)
+                )
+            elif hasattr(encoder, "transform"):
+                df[col] = encoder.transform(df[col].astype(str))
+        return df[feat_names]
+
+    def predict_proba(self, X):
+        """Return [[P(class=0), P(class=1)]] array."""
+        inner = self._inner()
+        X_enc = self._encode(X)
+        probs = inner.predict_proba(X_enc)[:, 1]
+        return np.column_stack([1 - probs, probs])
+
+    def predict(self, X):
+        """Return class predictions."""
+        return self._pyfunc.predict(X)
+
+    def __repr__(self):
+        uri = getattr(self._pyfunc, "model_uri", "?")
+        return f"<MLflowPyFuncWrapper: {uri}>"
+
+def _load_bundle_from_mlflow(model_key: ServingModel) -> ModelBundle:
+    """Load model from MLflow model registry.
+
+    Strategy:
+    1. Get model version info from registry (via alias)
+    2. Download python_model.pkl directly from MinIO S3 path
+    3. Load with joblib + wrap in _MLflowPyFuncWrapper
+    """
+    bundle: ModelBundle = {
+        "model": None,
+        "encoders": {},
+        "model_uri": None,
+        "run_id": None,
+        "model_source": "mlflow_registry",
+        "model_load_error": None,
+        "last_checked_at": datetime.now().isoformat(),
+        "last_loaded_at": None,
+    }
+    if mlflow is None:
+        bundle["model_load_error"] = f"MLflow not available: {_mlflow_import_error}"
+        return bundle
+
+    model_name = MODEL_REGISTRY_NAMES.get(model_key, model_key)
+    alias = MODEL_ALIASES.get(model_key, "staging")
+    bundle["model_uri"] = f"models:/{model_name}@{alias}"
+
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        client = mlflow.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+
+        mv = client.get_model_version_by_alias(model_name, alias)
+        run_id = getattr(mv, "run_id", None)
+        version = str(mv.version)
+        bundle["run_id"] = run_id
+        print(f"[predict] Model version={version}, run_id={run_id}")
+
+        # Download model artifact from MinIO
+        import boto3
+        from botocore.config import Config
+        s3_endpoint = MLFLOW_S3_ENDPOINT_URL.replace("http://", "").replace("https://", "")
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=f"http://{s3_endpoint}",
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=AWS_DEFAULT_REGION,
+            config=Config(signature_version="s3v4"),
+        )
+
+        # Try known model UUID path first
+        model_uuid = None
+        known_path = "models/m-2810ba11c72c458ebf55fec5b62818d0/artifacts"
+        try:
+            s3.head_object(Bucket="mlflow", Key=f"{known_path}/python_model.pkl")
+            model_uuid = "m-2810ba11c72c458ebf55fec5b62818d0"
+            print(f"[predict] Found model at known path: {known_path}")
+        except Exception:
+            print("[predict] Scanning MinIO for model artifact...")
+            paginator = s3.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket="mlflow", Prefix="models/"):
+                for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    if key.endswith("/python_model.pkl"):
+                        model_dir = key.rsplit("/", 1)[0]
+                        model_uuid = model_dir.split("/")[1]
+                        print(f"[predict] Found model at: {model_dir}")
+                        break
+                if model_uuid:
+                    break
+
+        if model_uuid is None:
+            raise RuntimeError(
+                "Could not find python_model.pkl in MinIO model artifacts."
+            )
+
+        # Download python_model.pkl
+        model_s3_key = f"models/{model_uuid}/artifacts/python_model.pkl"
+        import tempfile
+        import joblib
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as tmp:
+            tmp_path = tmp.name
+        s3.download_file("mlflow", model_s3_key, tmp_path)
+        model = joblib.load(tmp_path)
+        os.unlink(tmp_path)
+
+        wrapped = _MLflowPyFuncWrapper(model)
+        bundle["model"] = wrapped
+        bundle["last_loaded_at"] = datetime.now().isoformat()
+        print(f"[predict] Loaded {model_key} from MLflow/MinIO: s3://mlflow/{model_s3_key}")
+    except Exception as exc:
+        bundle["model_load_error"] = str(exc)
+        print(f"[predict] Failed to load {model_key} from MLflow: {exc}")
+    return bundle
+
+
 def _load_bundle_from_disk(model_key: ServingModel) -> ModelBundle:
     """Load model + encoders from local disk (no MLflow required)."""
     import joblib
@@ -175,9 +354,16 @@ def _load_bundle_from_disk(model_key: ServingModel) -> ModelBundle:
 
 def _load_models() -> None:
     global _model_bundles
-    _model_bundles = {
-        model_key: _load_bundle_from_disk(model_key) for model_key in VALID_MODELS
-    }
+    bundles: dict[ServingModel, ModelBundle] = {}
+    for model_key in VALID_MODELS:
+        # Try MLflow registry first (production path)
+        bundle = _load_bundle_from_mlflow(model_key)
+        if bundle["model"] is None:
+            # Fall back to local disk
+            print(f"[predict] MLflow load failed for {model_key}, falling back to local disk")
+            bundle = _load_bundle_from_disk(model_key)
+        bundles[model_key] = bundle
+    _model_bundles = bundles
 
 
 # Load at startup
@@ -563,7 +749,13 @@ def _predict_from_raw(
 
     row = {col: getattr(payload, col, 0) for col in ALL_FEATURES}
     df = pd.DataFrame([row])
-    df = _encode_categorical(df, encoders)
+    # MLflow models (BinaryClassifierWrapper) encode categoricals internally.
+    # Local disk models (raw XGBClassifier) need external encoding.
+    model_source = model_bundle.get("model_source", "local_disk")
+    if model_source == "mlflow_registry":
+        pass  # _MLflowPyFuncWrapper.predict_proba encodes internally
+    else:
+        df = _encode_categorical(df, encoders)
     df = df[ALL_FEATURES]
 
     if model is not None:

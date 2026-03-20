@@ -18,10 +18,9 @@ from api.schemas import (
     ServingModel,
 )
 
-os.environ.setdefault("AWS_ACCESS_KEY_ID", "minio")
+os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://minio.mlops.svc.cluster.local:9000")
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minio123")
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
-os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://localhost:9000")
 
 try:
     import mlflow
@@ -48,7 +47,7 @@ if str(MODEL_PIPELINE_ROOT) not in sys.path:
 MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 DEFAULT_MODEL_ALIAS = os.getenv("MLFLOW_MODEL_ALIAS", "champion")
 MODEL_REGISTRY_NAMES: dict[ServingModel, str] = {
-    "xgboost": os.getenv("MLFLOW_MODEL_NAME_XGBOOST", "xgboost_ctp"),
+    "xgboost": os.getenv("MLFLOW_MODEL_NAME_XGBOOST", "purchase_propensity_model"),
     "lightgbm": os.getenv("MLFLOW_MODEL_NAME_LIGHTGBM", "lightgbm_ctp"),
     "catboost": os.getenv("MLFLOW_MODEL_NAME_CATBOOST", "catboost_ctp"),
 }
