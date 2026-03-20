@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: serving-config
+  namespace: mlops
+data:
+  # FastAPI app config
+  APP_NAME: "Cart-to-Purchase API"
+  APP_VERSION: "0.1.0"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  WORKERS: "2"
+
+  # Model paths
+  MODELS_DIR: "/app/models"
+
+  # MLflow / MinIO
+  MLFLOW_TRACKING_URI: "http://mlflow.mlops.svc.cluster.local:5000"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio.mlops.svc.cluster.local:9000"
+  AWS_DEFAULT_REGION: "us-east-1"
+
+  # Model selection
+  DEFAULT_SERVING_MODEL: "xgboost"
+  MLFLOW_MODEL_NAME_XGBOOST: "purchase_propensity_model"
+  MLFLOW_MODEL_ALIAS_XGBOOST: "staging"
+
+  # Prediction
+  PREDICT_THRESHOLD: "0.525"
+
+  # CORS (allow all origins for dev)
+  CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+
+  # Feature store (local parquet fallback)
+  FEAST_REPO_PATH: "/app/models/feast_repo"

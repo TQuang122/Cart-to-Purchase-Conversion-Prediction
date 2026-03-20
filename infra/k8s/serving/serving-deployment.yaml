@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serving-api
+  namespace: mlops
+  labels:
+    app: serving-api
+    version: v9
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: serving-api
+  template:
+    metadata:
+      labels:
+        app: serving-api
+        version: v9
+    spec:
+      initContainers:
+        - name: download-model
+          image: ctpserving:v9
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          command: ["python", "/download_model.py"]
+          env:
+            - name: MINIO_ENDPOINT
+              value: "minio.mlops.svc.cluster.local:9000"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: serving-secret
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: serving-secret
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: MODEL_DIR
+              value: "/app/models"
+          volumeMounts:
+            - name: models-volume
+              mountPath: /app/models
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+      containers:
+        - name: serving-api
+          image: ctpserving:v9
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          command: ["uvicorn"]
+          args:
+            - "api.main:app"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+          envFrom:
+            - configMapRef:
+                name: serving-config
+            - secretRef:
+                name: serving-secret
+          env:
+            - name: PYTHONPATH
+              value: "/app:/root/.local/lib/python3.10/site-packages"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: models-volume
+              mountPath: /app/models
+
+      volumes:
+        - name: models-volume
+          persistentVolumeClaim:
+            claimName: serving-models-pvc
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - serving-api
+                topologyKey: kubernetes.io/hostname
