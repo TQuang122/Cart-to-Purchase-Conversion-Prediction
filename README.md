@@ -48,37 +48,37 @@ Cart-to-purchase conversion is formulated as a **conditional binary classificati
 #### Mode A: KinD Kubernetes (production-style, full MLOps)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                KinD Cluster (kind ctp-cluster)               │
-│                      namespace: mlops                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
+┌───────────────────────────────────────────────────────────┐
+│                KinD Cluster (kind ctp-cluster)            │
+│                      namespace: mlops                     │
+├───────────────────────────────────────────────────────────┤
+│                                                           │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
 │  │PostgreSQL│  │  MinIO   │  │  MLflow  │  │   Kafka  │   │
-│  │  :5432   │  │ :9000/9001│ │  :5000   │  │  :9092   │   │
+│  │  :5432   │  │:9000/9001│  │  :5000   │  │  :9092   │   │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│                                                              │
+│                                                           │
 │  ┌──────────────────────┐  ┌──────────────────────────┐   │
-│  │  Apache Airflow       │  │    Serving API (FastAPI)   │   │
-│  │  :8080 (webserver)   │  │    :8000 (ClusterIP)       │   │
-│  └──────────────────────┘  │    image: ctpserving:v9    │   │
-│                            └──────────────────────────┬──┘   │
-│                                                       │       │
-│                                                       ▼       │
-│                                          GET /predict/stats   │
-│                                          POST /predict/raw-lite│
-│                                          POST /predict/feast   │
-└─────────────────────────────────────────────────────────────┘
+│  │  Apache Airflow      │  │    Serving API (FastAPI) │   │
+│  │  :8080 (webserver)   │  │    :8000 (ClusterIP)     │   │
+│  └──────────────────────┘  │    image: ctpserving:v14  │
+│                            └─────────────────┬────────┘   │   
+│                                              │            │
+│                                              ▼            │
+│                                     GET /predict/stats    │
+│                                     POST /predict/raw-lite│
+│                                     POST /predict/feast   │
+└───────────────────────────────────────────────────────────┘
 ```
 
 #### Mode B: Docker Compose (local dev)
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  docker compose (./infra/docker/run.sh up)       │
-│                                                   │
-│  MLflow :5000  |  MinIO :9000  |  Kafka :9092    │
-│  Airflow :8090  |  MySQL :3306                    │
+│  docker compose (./infra/docker/run.sh up)      │
+│                                                 │
+│  MLflow :5000  |  MinIO :9000  |  Kafka :9092   │
+│  Airflow :8090  |  MySQL :3306                  │
 └─────────────────────────────────────────────────┘
                           │
                           ▼
@@ -139,8 +139,8 @@ kubectl get pods -n mlops
 
 # 4. Build & deploy serving API
 cd serving_pipeline
-docker build -f Dockerfile.serving -t ctpserving:v9 .
-kind load docker-image ctpserving:v9 --name ctp-cluster
+docker build -f Dockerfile.serving -t ctpserving:v14 .
+kind load docker-image ctpserving:v14 --name ctp-cluster
 kubectl apply -f infra/k8s/serving/
 
 # 5. Access serving API
@@ -169,7 +169,7 @@ All endpoints work on port `18000` (KinD K8s) or `8000` (local Docker).
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/predict/stats` | Model health, source (mlflow_registry), run_id |
-| `POST` | `/predict/raw-lite` | Minimal prediction with user/product features |
+| `POST` | `/predict/raw-lite?explain_level=full` | Prediction with SHAP feature contributions |
 | `POST` | `/predict/feast` | Full feature set prediction |
 | `GET` | `/model/info` | Model metadata |
 | `GET` | `/health` | API health check |
@@ -206,11 +206,44 @@ Response:
   "probability": 0.6481,
   "decision_threshold": 0.525,
   "model_used": "xgboost",
-  "feature_quality": {"score": 39.0, "grade": "D", "inferred_count": 12}
+  "feature_quality": {"score": 39.0, "grade": "D", "inferred_count": 12},
+  "feature_contributions": [
+    {"feature": "user_cart_to_purchase_rate", "contribution": 0.42645},
+    {"feature": "user_total_purchases", "contribution": 0.31382},
+    {"feature": "activity_count", "contribution": 0.208}
+  ],
+  "explainability": {
+    "method": "tree_contrib",
+    "baseline_score": -0.045,
+    "top_signals": [
+      {"feature": "user_cart_to_purchase_rate", "contribution": 0.42645},
+      {"feature": "user_total_purchases", "contribution": 0.31382},
+      {"feature": "activity_count", "contribution": 0.208}
+    ]
+  }
 }
-```
 
 ---
+## 🧠 SHAP Feature Contributions
+
+The serving API computes **XGBoost tree SHAP** contributions for every prediction, enabling model explainability.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_contributions` | `array` | All 26 features with per-feature SHAP contributions |
+| `explainability.method` | `string` | Always `tree_contrib` |
+| `explainability.baseline_score` | `float` | Model bias term (intercept) |
+| `explainability.top_signals` | `array` | Top 3 features by absolute contribution magnitude |
+| `explainability.notes` | `array` | Optional debug/inference notes (empty by default) |
+| `explainability.baseline_score` | `float` | Model bias term (intercept) |
+| `explainability.top_signals` | `array` | Top 3 features by absolute contribution magnitude |
+| `explainability.method` | `string` | Always `tree_contrib` |
+
+**Key implementation details:**
+- Uses `booster.predict(dmat, pred_contribs=True)` via `xgb.DMatrix` — raw numpy arrays cause TypeError
+- Extracts contributions from `_MLflowPyFuncWrapper.get_booster()` — raw Booster lacks this method
+- Pads missing feature columns with `0.0` when model was trained on a subset of 26 features
+- Query param `explain_level=full` returns all 26 contributions; default `explain_level=top` returns only top 3 signals
 
 ## 📁 Project Structure
 
