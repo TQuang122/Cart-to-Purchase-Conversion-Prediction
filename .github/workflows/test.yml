@@ -1,0 +1,99 @@
+# =============================================================================
+# GitHub Actions Workflow - Run Tests on Pull Request
+#
+# Trigger: Pull requests
+# Runs: pytest on model_pipeline/src/test/ and playwright on serving_pipeline/react-ui/
+# =============================================================================
+name: Test
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'papers/**'
+      - '**.md'
+      - 'README*'
+      - '.github/**'
+
+permissions:
+  contents: read
+
+jobs:
+  pytest-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            model_pipeline/requirements.txt
+            serving_pipeline/requirements.txt
+
+      - name: Install model pipeline dependencies
+        run: |
+          pip install --no-cache-dir -r model_pipeline/requirements.txt
+
+      - name: Install serving pipeline dependencies
+        run: |
+          pip install --no-cache-dir -r serving_pipeline/requirements.txt
+
+      - name: Run pytest on model pipeline
+        run: |
+          pytest model_pipeline/src/test/ -v --tb=short
+
+      - name: Upload pytest coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            model_pipeline/src/test/results/
+            .pytest_cache/
+          retention-days: 7
+          ignore-no-files: true
+
+  playwright-tests:
+    runs-on: ubuntu-latest
+    # Playwright tests need Node.js and a browser
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: serving_pipeline/react-ui/package-lock.json
+
+      - name: Install npm dependencies
+        working-directory: serving_pipeline/react-ui
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: serving_pipeline/react-ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: serving_pipeline/react-ui
+        run: npx playwright test
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            serving_pipeline/react-ui/test-results/
+            serving_pipeline/react-ui/playwright-report/
+          retention-days: 7
+          ignore-no-files: true

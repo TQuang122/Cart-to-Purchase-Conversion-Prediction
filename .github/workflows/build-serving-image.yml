@@ -1,0 +1,150 @@
+# =============================================================================
+# GitHub Actions Workflow - Build and Push Serving Docker Image
+#
+# Trigger: Push to `main` branch
+# Outputs: ctpserving:{short_sha}-{timestamp} and ctpserving:latest to Docker Hub
+# =============================================================================
+name: Build Serving Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/*.yml'
+      - 'Dockerfile*'
+      - 'serving_pipeline/**'
+      - 'model_pipeline/**'
+      - 'infra/**'
+
+env:
+  REGISTRY: registry.hub.docker.com
+  IMAGE_NAME: ctpserving
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      # Extract version: use git tag if available, otherwise generate timestamp-based tag
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "Using git tag version: $VERSION"
+          else
+            VERSION="${GITHUB_SHA::7}-$(date +'%Y%m%d%H%M%S')"
+            echo "Using generated version: $VERSION"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract short SHA
+        id: sha
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.serving
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/image-name.txt
+
+      - name: Save image tag as artifact
+        run: |
+          echo "${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}" > /tmp/image-tag.txt
+          echo "IMAGE_TAG=${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: Upload image tag artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tag
+          path: /tmp/image-tag.txt
+          retention-days: 7
+
+      # Create PR comment with image version for the merged PR
+      - name: Find PR associated with merged commit
+        id: find-pr
+        if: github.event.commits[0] != null
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/pulls --jq '.[0].number' 2>/dev/null || echo "")
+          if [[ -n "$PR_NUMBER" && "$PR_NUMBER" != "null" ]]; then
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "Found PR #$PR_NUMBER"
+          else
+            echo "No open PR found for this commit, skipping PR comment"
+            echo "PR_NUMBER=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR comment with image tag
+        if: steps.find-pr.outputs.PR_NUMBER != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = process.env.VERSION;
+            const imageTag = process.env.IMAGE_TAG;
+            const prNumber = process.env.PR_NUMBER;
+
+            const commentBody = `## 🚀 New Serving Image Deployed
+
+            **Image:** \`${imageTag}\`
+
+            **Version:** ${version}
+            **Commit:** \`${{ github.sha }}\`
+            **Author:** ${{ github.actor }}
+
+            The serving image has been built and pushed to Docker Hub. You can update your KinD cluster with:
+
+            \`\`\`bash
+            docker pull ${imageTag}
+            kind load docker-image ${imageTag} --name ctp-cluster
+            kubectl rollout restart deployment/serving-api -n mlops
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          IMAGE_TAG: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          PR_NUMBER: ${{ steps.find-pr.outputs.PR_NUMBER }}
+
+      - name: Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | \`${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latest Tag | \`${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ steps.version.outputs.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
