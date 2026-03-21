@@ -1,8 +1,20 @@
 # =============================================================================
 # GitHub Actions Workflow - Build and Push Serving Docker Image
 #
-# Trigger: Push to `main` branch
-# Outputs: ctpserving:{short_sha}-{timestamp} and ctpserving:latest to Docker Hub
+# Trigger:
+#   - Push to `main` branch (when relevant paths change)
+#   - Manual dispatch (for testing without pushing to main)
+#   - Git tags matching v* (semantic versioning)
+#
+# Outputs:
+#   - tquang71/ctpserving:{version}  (git tag or {sha}-{timestamp})
+#   - tquang71/ctpserving:latest
+#
+# Required secrets:
+#   - DOCKER_HUB_USERNAME  (your Docker Hub username)
+#   - DOCKER_HUB_TOKEN     (access token from Docker Hub)
+#
+# Setup: GitHub repo → Settings → Secrets and variables → Actions
 # =============================================================================
 name: Build Serving Image
 
@@ -10,15 +22,24 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
     paths:
       - '.github/workflows/*.yml'
       - 'Dockerfile*'
       - 'serving_pipeline/**'
       - 'model_pipeline/**'
       - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip push)'
+        required: false
+        default: false
+        type: boolean
 
 env:
-  REGISTRY: registry.hub.docker.com
+  REGISTRY: docker.io
   IMAGE_NAME: ctpserving
 
 permissions:
@@ -37,72 +58,111 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # --- Secret validation (fail fast before expensive build) ---
+      - name: Validate Docker Hub secrets
+        id: secrets
+        run: |
+          if [[ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]]; then
+            echo "ERROR: DOCKER_HUB_USERNAME secret is not set."
+            echo "Set it at: GitHub repo → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          if [[ -z "${{ secrets.DOCKER_HUB_TOKEN }}" ]]; then
+            echo "ERROR: DOCKER_HUB_TOKEN secret is not set."
+            echo "Create a token at: https://hub.docker.com/settings/security"
+            exit 1
+          fi
+          echo "username=${{ secrets.DOCKER_HUB_USERNAME }}" >> $GITHUB_OUTPUT
+          echo "dry_run=${{ github.event.inputs.dry_run || 'false' }}" >> $GITHUB_OUTPUT
+          echo "✓ Secrets validated"
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          username: ${{ steps.secrets.outputs.username }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      # Extract version: use git tag if available, otherwise generate timestamp-based tag
+      # --- Version extraction ---
+      # Detect if this is a tag push (refs/tags/v*) or a branch push
       - name: Extract version
         id: version
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-            echo "Using git tag version: $VERSION"
+          REF="${{ github.ref }}"
+          SHA_SHORT="{{ github.sha ::7 }}"
+          TIMESTAMP="$(date +'%Y%m%d%H%M%S')"
+
+          # Tag push: refs/tags/v1.2.3 → version = 1.2.3
+          if [[ "$REF" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION="{{ BASH_REMATCH[1] }}"
+            echo "tagged version: $VERSION"
+          # Branch push (main): generate sha+timestamp version
+          elif [[ "$REF" == "refs/heads/main" ]]; then
+            VERSION="${SHA_SHORT}-${TIMESTAMP}"
+            echo "branch push — generated version: $VERSION"
           else
-            VERSION="${GITHUB_SHA::7}-$(date +'%Y%m%d%H%M%S')"
-            echo "Using generated version: $VERSION"
+            VERSION="${SHA_SHORT}-${TIMESTAMP}"
+            echo "non-main branch push — generated version: $VERSION"
           fi
+
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "DEBUG: ref=$REF, version=$VERSION" >> $GITHUB_STEP_SUMMARY
 
-      - name: Extract short SHA
-        id: sha
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
+      # --- Docker build + push ---
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.serving
-          push: true
+          push: ${{ steps.secrets.outputs.dry_run != 'true' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-            ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/image-name.txt
+          outputs: type=registry
 
+      # Skip artifact + PR steps if dry_run
       - name: Save image tag as artifact
+        if: steps.secrets.outputs.dry_run != 'true'
         run: |
-          echo "${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}" > /tmp/image-tag.txt
-          echo "IMAGE_TAG=${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          FULL_IMAGE="${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}"
+          echo "$FULL_IMAGE" > /tmp/image-tag.txt
+          echo "IMAGE_TAG=$FULL_IMAGE" >> $GITHUB_OUTPUT
+          echo "::notice title=Image pushed:: $FULL_IMAGE"
 
       - name: Upload image tag artifact
+        if: steps.secrets.outputs.dry_run != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: image-tag
           path: /tmp/image-tag.txt
           retention-days: 7
 
-      # Create PR comment with image version for the merged PR
+      # --- Find merged PR for comment ---
       - name: Find PR associated with merged commit
         id: find-pr
-        if: github.event.commits[0] != null
+        if: steps.secrets.outputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/pulls --jq '.[0].number' 2>/dev/null || echo "")
+          # Only run on push events (not workflow_dispatch which lacks event context)
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "Skipping PR lookup (not a push event)"
+            echo "PR_NUMBER=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/pulls \
+            --jq '.[0].number' 2>/dev/null || echo "")
           if [[ -n "$PR_NUMBER" && "$PR_NUMBER" != "null" ]]; then
             echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
             echo "Found PR #$PR_NUMBER"
           else
-            echo "No open PR found for this commit, skipping PR comment"
+            echo "No open PR found for this commit"
             echo "PR_NUMBER=" >> $GITHUB_OUTPUT
           fi
 
       - name: Create PR comment with image tag
-        if: steps.find-pr.outputs.PR_NUMBER != ''
+        if: steps.secrets.outputs.dry_run != 'true' && steps.find-pr.outputs.PR_NUMBER != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -110,23 +170,17 @@ jobs:
             const imageTag = process.env.IMAGE_TAG;
             const prNumber = process.env.PR_NUMBER;
 
-            const commentBody = `## 🚀 New Serving Image Deployed
-
-            **Image:** \`${imageTag}\`
-
-            **Version:** ${version}
-            **Commit:** \`${{ github.sha }}\`
-            **Author:** ${{ github.actor }}
-
-            The serving image has been built and pushed to Docker Hub. You can update your KinD cluster with:
-
-            \`\`\`bash
-            docker pull ${imageTag}
-            kind load docker-image ${imageTag} --name ctp-cluster
-            kubectl rollout restart deployment/serving-api -n mlops
-            \`\`\`
-            `;
-
+            const commentBody = "## 🚀 New Serving Image Deployed\n\n" +
+              "**Image:** `" + imageTag + "`\n" +
+              "**Version:** " + version + "\n" +
+              "**Commit:** `" + process.env.GITHUB_SHA + "`\n" +
+              "**Author:** " + process.env.GITHUB_ACTOR + "\n\n" +
+              "Update your KinD cluster:\n\n" +
+              "```bash\n" +
+              "docker pull " + imageTag + "\n" +
+              "kind load docker-image " + imageTag + " --name ctp-cluster\n" +
+              "kubectl rollout restart deployment/serving-api -n mlops\n" +
+              "```";
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -135,7 +189,7 @@ jobs:
             });
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
-          IMAGE_TAG: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
+          IMAGE_TAG: ${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
           PR_NUMBER: ${{ steps.find-pr.outputs.PR_NUMBER }}
 
       - name: Summary
@@ -144,7 +198,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image Tag | \`${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Latest Tag | \`${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latest | \`${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:latest\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${{ steps.version.outputs.VERSION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry run | \`${{ steps.secrets.outputs.dry_run }}\` |" >> $GITHUB_STEP_SUMMARY
