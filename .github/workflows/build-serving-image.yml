@@ -114,6 +114,7 @@ jobs:
           context: .
           file: ./Dockerfile.serving
           push: ${{ steps.secrets.outputs.dry_run != 'true' }}
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
             ${{ env.REGISTRY }}/${{ steps.secrets.outputs.username }}/${{ env.IMAGE_NAME }}:latest
