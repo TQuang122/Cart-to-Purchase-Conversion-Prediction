@@ -88,19 +88,19 @@ jobs:
         id: version
         run: |
           REF="${{ github.ref }}"
-          SHA_SHORT="{{ github.sha ::7 }}"
+          SHA="${GITHUB_SHA}"
           TIMESTAMP="$(date +'%Y%m%d%H%M%S')"
 
           # Tag push: refs/tags/v1.2.3 → version = 1.2.3
           if [[ "$REF" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            VERSION="{{ BASH_REMATCH[1] }}"
+            VERSION="${BASH_REMATCH[1]}"
             echo "tagged version: $VERSION"
           # Branch push (main): generate sha+timestamp version
           elif [[ "$REF" == "refs/heads/main" ]]; then
-            VERSION="${SHA_SHORT}-${TIMESTAMP}"
+            VERSION="${SHA:0:7}-${TIMESTAMP}"
             echo "branch push — generated version: $VERSION"
           else
-            VERSION="${SHA_SHORT}-${TIMESTAMP}"
+            VERSION="${SHA:0:7}-${TIMESTAMP}"
             echo "non-main branch push — generated version: $VERSION"
           fi
 
