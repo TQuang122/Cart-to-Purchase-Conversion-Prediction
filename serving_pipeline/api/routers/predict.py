@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
+import xgboost as xgb
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
 from sklearn.preprocessing import LabelEncoder
@@ -223,6 +224,10 @@ class _MLflowPyFuncWrapper:
     def __repr__(self):
         uri = getattr(self._pyfunc, "model_uri", "?")
         return f"<MLflowPyFuncWrapper: {uri}>"
+
+    def get_booster(self):
+        """Return the underlying XGBoost booster for SHAP/contrib extraction."""
+        return self._inner().get_booster()
 
 def _load_bundle_from_mlflow(model_key: ServingModel) -> ModelBundle:
     """Load model from MLflow model registry.
@@ -625,7 +630,8 @@ def _extract_feature_contributions(
         if hasattr(model, "get_booster"):
             booster = model.get_booster()
             matrix = np.asarray(encoded_df[ALL_FEATURES], dtype=float)
-            contrib_matrix = booster.predict(matrix, pred_contribs=True)
+            dmat = xgb.DMatrix(matrix, feature_names=ALL_FEATURES)
+            contrib_matrix = booster.predict(dmat, pred_contribs=True)
             row_contrib = contrib_matrix[0]
             baseline_score = float(row_contrib[-1])
             raw_values = row_contrib[:-1]
@@ -642,7 +648,10 @@ def _extract_feature_contributions(
                 )
                 for feature_name in ALL_FEATURES
             ], baseline_score
-    except Exception:
+    except Exception as exc:
+        import traceback
+        print(f"[predict] _extract_feature_contributions failed: {exc}")
+        traceback.print_exc()
         pass
 
     importances = None
@@ -749,20 +758,25 @@ def _predict_from_raw(
 
     row = {col: getattr(payload, col, 0) for col in ALL_FEATURES}
     df = pd.DataFrame([row])
-    # MLflow models (BinaryClassifierWrapper) encode categoricals internally.
-    # Local disk models (raw XGBClassifier) need external encoding.
     model_source = model_bundle.get("model_source", "local_disk")
-    if model_source == "mlflow_registry":
-        pass  # _MLflowPyFuncWrapper.predict_proba encodes internally
-    else:
-        df = _encode_categorical(df, encoders)
-    df = df[ALL_FEATURES]
-
     if model is not None:
-        proba = float(model.predict_proba(df)[0, 1])
+        # MLflow models encode internally and need the inner booster for SHAP.
+        # Local disk models use pre-encoded df and have get_booster() on the model itself.
+        if model_source == "mlflow_registry":
+            contrib_model = model  # MLflowPyFuncWrapper has get_booster()
+            encoded_df = model._encode(df)       # apply same encoding as predict()
+            # Pad missing columns with 0 (model trained on subset of ALL_FEATURES)
+            for col in ALL_FEATURES:
+                if col not in encoded_df.columns:
+                    encoded_df[col] = 0.0
+            encoded_df = encoded_df[ALL_FEATURES]
+        else:
+            contrib_model = model
+            encoded_df = df
+        proba = float(model.predict_proba(encoded_df)[0, 1])
         is_purchased = 1 if proba >= effective_threshold else 0
         feature_contributions, baseline_score = _extract_feature_contributions(
-            model, df
+            contrib_model, encoded_df
         )
     else:
         # Deterministic heuristic fallback (no random)
