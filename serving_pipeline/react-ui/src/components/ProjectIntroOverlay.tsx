@@ -67,12 +67,24 @@ export function ProjectIntroOverlay({ open, onClose, onUsePreset }: ProjectIntro
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
+
   if (!open) return null
 
   return (
     <div
-      className="overlay-scrim-strong fixed inset-0 z-[60] flex items-center justify-center px-4 py-6 backdrop-blur-sm"
+      className="overlay-scrim-strong fixed inset-0 z-[60] flex items-center justify-center px-4 py-6"
       onClick={onClose}
+      style={{ touchAction: 'manipulation' }}
     >
       <div
         className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl shadow-black/50"
@@ -81,7 +93,7 @@ export function ProjectIntroOverlay({ open, onClose, onUsePreset }: ProjectIntro
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-md border border-border/60 bg-background/70 p-2 text-muted-foreground transition-colors hover:text-foreground"
+          className="absolute right-3 top-3 inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border/60 bg-background/70 p-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
           aria-label="Close introduction"
         >
           <X className="h-4 w-4" />
@@ -160,6 +172,13 @@ export function ProjectIntroOverlay({ open, onClose, onUsePreset }: ProjectIntro
           ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              className="h-10 justify-center text-muted-foreground hover:text-foreground sm:mr-auto"
+            >
+              Skip intro
+            </Button>
             {currentStep > 0 ? (
               <Button
                 variant="outline"

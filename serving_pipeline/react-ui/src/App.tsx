@@ -85,7 +85,10 @@ function App() {
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 1024px)').matches
   })
-  const [isSideRailOpen, setIsSideRailOpen] = useState(true)
+  const [isSideRailOpen, setIsSideRailOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia('(min-width: 1024px)').matches
+  })
   const exitTimerRef = useRef<number | null>(null)
   const enterTimerRef = useRef<number | null>(null)
   const [, setStats] = useState<StatsData | null>(null)
@@ -159,7 +162,7 @@ function App() {
     handleTabChange(tabs[nextIdx].id)
   }
 
-  const handleOpenIntro = () => { setIsIntroOpen(true); setIntroSessionKey(k => k + 1) }
+  const handleOpenIntro = () => { setIsSideRailOpen(false); setIsIntroOpen(true); setIntroSessionKey(k => k + 1) }
   const handleCloseIntro = () => { window.localStorage.setItem(INTRO_SEEN_KEY, 'true'); setIsIntroOpen(false) }
   const handleUseStarterPreset = () => { handleCloseIntro(); setAutoPresetId('default'); setAutoPresetToken(Date.now()) }
   const handleThresholdChange = (value: number) => dispatch({ type: 'setSelectedThreshold', payload: value })
