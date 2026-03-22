@@ -81,6 +81,10 @@ function App() {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem(CALM_MODE_KEY) === 'true'
   })
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia('(min-width: 1024px)').matches
+  })
   const [isSideRailOpen, setIsSideRailOpen] = useState(true)
   const exitTimerRef = useRef<number | null>(null)
   const enterTimerRef = useRef<number | null>(null)
@@ -91,6 +95,14 @@ function App() {
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const handle = () => setReduceMotion(media.matches)
+    handle()
+    media.addEventListener('change', handle)
+    return () => media.removeEventListener('change', handle)
+  }, [])
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)')
+    const handle = () => setIsDesktop(media.matches)
     handle()
     media.addEventListener('change', handle)
     return () => media.removeEventListener('change', handle)
@@ -247,16 +259,18 @@ function App() {
                 </div>
                 {isSideRailOpen ? (
                   <>
-                    <Sheet open={isSideRailOpen} onOpenChange={setIsSideRailOpen}>
-                      <SheetContent side="right" className="w-[min(92vw,360px)] border-border/80 bg-surface-1 lg:hidden">
-                        <SheetHeader>
-                          <SheetTitle>Context and controls</SheetTitle>
-                          <SheetDescription>Quick model context and action shortcuts.</SheetDescription>
-                        </SheetHeader>
-                        <div className="mt-4">{sideRailContent}</div>
-                      </SheetContent>
-                    </Sheet>
-                    <aside className="hidden space-y-3 lg:block">{sideRailContent}</aside>
+                    {!isDesktop ? (
+                      <Sheet open={isSideRailOpen} onOpenChange={setIsSideRailOpen}>
+                        <SheetContent side="right" className="w-[min(92vw,360px)] border-border/80 bg-surface-1 lg:hidden">
+                          <SheetHeader>
+                            <SheetTitle>Context and controls</SheetTitle>
+                            <SheetDescription>Quick model context and action shortcuts.</SheetDescription>
+                          </SheetHeader>
+                          <div className="mt-4">{sideRailContent}</div>
+                        </SheetContent>
+                      </Sheet>
+                    ) : null}
+                    {isDesktop ? <aside className="hidden space-y-3 lg:block">{sideRailContent}</aside> : null}
                   </>
                 ) : null}
               </div>
