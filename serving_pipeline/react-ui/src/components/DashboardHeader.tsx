@@ -16,37 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid'
+import { StatCounter, CircularCounter } from '@/components/ui/number-counter'
+import SegmentedButton from '@/components/ui/segmented-button'
+import { AnimatedTooltip } from '@/components/ui/animated-tooltip'
 import type { ServingModel } from '@/types/api'
-
-interface StatCardProps {
-  icon: React.ReactNode
-  label: string
-  value: string | number
-  color: 'teal' | 'emerald' | 'amber' | 'rose'
-}
-
-const colorClasses = {
-  teal: 'state-surface-info',
-  emerald: 'state-surface-success',
-  amber: 'state-surface-warning',
-  rose: 'state-surface-error',
-}
-
-function StatCard({ icon, label, value, color }: StatCardProps) {
-  return (
-    <div
-      className={`dashboard-card-muted relative overflow-hidden p-3 sm:p-4 transition-[border-color,background-color,color,box-shadow] duration-200 ${colorClasses[color]}`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">{label}</p>
-          <p className="mt-1 text-xl font-mono font-semibold tabular-nums tracking-tight text-text-primary sm:text-2xl">{value}</p>
-        </div>
-        <div className="rounded-lg bg-surface-1/60 p-2">{icon}</div>
-      </div>
-    </div>
-  )
-}
 
 export interface StatsData {
   total_predictions: number
@@ -280,6 +254,26 @@ export function DashboardHeader({
                 aria-label="Decision threshold"
                 aria-valuetext={thresholdLabel}
               />
+              <div className="mt-2">
+                <AnimatedTooltip content="Quick threshold presets" placement="top">
+                  <SegmentedButton
+                    buttons={[
+                      { id: 'low', label: 'Low' },
+                      { id: 'balanced', label: 'Balanced' },
+                      { id: 'high', label: 'High' },
+                    ]}
+                    defaultActive={
+                      clampedThreshold < 0.45 ? 'low' : 
+                      clampedThreshold > 0.6 ? 'high' : 'balanced'
+                    }
+                    onChange={(id) => {
+                      const values = { low: 0.4, balanced: 0.525, high: 0.65 }
+                      onThresholdChange(values[id as keyof typeof values] ?? 0.525)
+                    }}
+                    className="w-full"
+                  />
+                </AnimatedTooltip>
+              </div>
               <p className="type-caption mt-1">{thresholdExplainer}</p>
             </div>
 
@@ -360,20 +354,52 @@ export function DashboardHeader({
       </div>
       {layout === 'full' && (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            <div className="animate-slide-up" style={{ animationDelay: '0ms' }}>
-              <StatCard icon={<Activity className="state-text-info h-5 w-5" />} label="Total Predictions" value={animatedPredictions.toLocaleString()} color="teal" />
-            </div>
-            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
-              <StatCard icon={<TrendingUp className="state-text-success h-5 w-5" />} label="Success Rate" value={`${animatedRate}%`} color="emerald" />
-            </div>
-            <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-              <StatCard icon={<CheckCircle2 className="state-text-warning h-5 w-5" />} label="Models Usable" value={modelsUsable} color="amber" />
-            </div>
-            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-              <StatCard icon={<Activity className="state-text-error h-5 w-5" />} label="Recent (5m)" value={stats?.recent_activity ?? 0} color="rose" />
-            </div>
-          </div>
+          <BentoGrid className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <BentoGridItem className="animate-slide-up" style={{ animationDelay: '0ms' }}>
+              <div className="dashboard-card-muted relative flex h-full flex-col justify-between overflow-hidden p-4 sm:p-5">
+                <div className="mb-3">
+                  <Activity className="state-text-info mb-2 h-6 w-6" />
+                  <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">Total Predictions</p>
+                </div>
+                <div>
+                  <p className="type-metric text-3xl font-bold tabular-nums text-text-primary sm:text-4xl">
+                    {animatedPredictions.toLocaleString()}
+                  </p>
+                  <StatCounter value={animatedRate} label="Success Rate %" suffix="%" decimals={1} className="font-bold text-2xl text-text-primary" />
+                </div>
+              </div>
+            </BentoGridItem>
+
+            <BentoGridItem className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+              <div className="dashboard-card-muted relative flex h-full flex-col items-center justify-center overflow-hidden p-4 sm:p-5">
+                <div className="mb-3 text-center">
+                  <TrendingUp className="state-text-success mx-auto mb-2 h-6 w-6" />
+                  <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">Success Rate</p>
+                </div>
+                <CircularCounter value={animatedRate} size={120} strokeWidth={8} color="hsl(var(--success))" />
+              </div>
+            </BentoGridItem>
+
+            <BentoGridItem className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+              <div className="dashboard-card-muted relative flex h-full flex-col justify-between overflow-hidden p-4 sm:p-5">
+                <div className="mb-3">
+                  <CheckCircle2 className="state-text-warning mb-2 h-6 w-6" />
+                  <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">Models Usable</p>
+                </div>
+                <p className="type-metric text-4xl font-bold tabular-nums text-text-primary sm:text-5xl">{modelsUsable}</p>
+              </div>
+            </BentoGridItem>
+
+            <BentoGridItem className="animate-slide-up" style={{ animationDelay: '300ms' }}>
+              <div className="dashboard-card-muted relative flex h-full flex-col justify-between overflow-hidden p-4 sm:p-5">
+                <div className="mb-3">
+                  <Activity className="state-text-error mb-2 h-6 w-6" />
+                  <p className="text-xs font-medium uppercase tracking-wider text-text-secondary">Recent (5m)</p>
+                </div>
+                <p className="type-metric text-4xl font-bold tabular-nums text-text-primary sm:text-5xl">{stats?.recent_activity ?? 0}</p>
+              </div>
+            </BentoGridItem>
+          </BentoGrid>
 
           {modelHealthEntries.length > 0 && (
             <div className="dashboard-card-muted animate-slide-up p-4" style={{ animationDelay: '420ms' }}>

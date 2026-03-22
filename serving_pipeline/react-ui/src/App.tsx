@@ -1,13 +1,15 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
-import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles, Command, Settings, HelpCircle, DatabaseZap } from 'lucide-react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
 import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
 import { ChatbotWidget } from '@/components/ChatbotWidget'
 import { MeshGradient } from '@/components/MeshGradient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CommandPalette, type CommandGroup } from '@/components/ui/command-palette'
+import { TypewriterText } from '@/components/ui/typewritter-text'
 import { useAppContext } from '@/contexts/AppContext'
 
 type TabValue = 'raw' | 'batch' | 'feast'
@@ -55,6 +57,7 @@ function App() {
   const CALM_MODE_KEY = 'c2p_calm_mode_v1'
   const TAB_EXIT_MS = 170
   const TAB_ENTER_MS = 260
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
 
   const [activeTab, setActiveTab] = useState<TabValue>(() => typeof window === 'undefined' ? 'raw' : getTabFromSearch(window.location.search))
   const [visibleTab, setVisibleTab] = useState<TabValue>(() => typeof window === 'undefined' ? 'raw' : getTabFromSearch(window.location.search))
@@ -95,7 +98,16 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsSideRailOpen(false) }
+    const onKeyDown = (e: KeyboardEvent) => { 
+      if (e.key === 'Escape') {
+        setIsSideRailOpen(false)
+        setIsCommandPaletteOpen(false)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen(true)
+      }
+    }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
@@ -139,6 +151,28 @@ function App() {
   const handleUseStarterPreset = () => { handleCloseIntro(); setAutoPresetId('default'); setAutoPresetToken(Date.now()) }
   const handleThresholdChange = (value: number) => dispatch({ type: 'setSelectedThreshold', payload: value })
 
+  const commandGroups: CommandGroup[] = [
+    {
+      id: 'navigation',
+      heading: 'Navigation',
+      items: [
+        { id: 'nav-raw', label: 'Raw Features Tab', description: 'Go to manual feature input', icon: Database, onSelect: () => handleTabChange('raw') },
+        { id: 'nav-batch', label: 'Batch CSV Tab', description: 'Upload CSV for bulk predictions', icon: FileSpreadsheet, onSelect: () => handleTabChange('batch') },
+        { id: 'nav-feast', label: 'Feast Lookup Tab', description: 'Query feature store', icon: Search, onSelect: () => handleTabChange('feast') },
+        { id: 'nav-dataset', label: 'Dataset Explorer', description: 'View dataset statistics', icon: DatabaseZap, onSelect: () => { window.location.assign('/dataset') } },
+      ],
+    },
+    {
+      id: 'actions',
+      heading: 'Quick Actions',
+      items: [
+        { id: 'action-intro', label: 'Show Introduction', description: 'View project introduction', icon: HelpCircle, onSelect: handleOpenIntro },
+        { id: 'action-refresh', label: 'Refresh Stats', description: 'Update model statistics', shortcut: ['⌘R'], onSelect: () => {} },
+        { id: 'action-settings', label: 'Open Settings', description: 'Configure threshold and model', icon: Settings, onSelect: () => setIsSideRailOpen(true) },
+      ],
+    },
+  ]
+
   const primaryHint: Record<TabValue, string> = {
     raw: 'Review feature quality and compare against previous single prediction.',
     batch: 'Upload a cleaned CSV and validate summary deltas before export.',
@@ -146,18 +180,32 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
-        <Toaster position="top-right" richColors />
-        <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
+      <Routes>
+        <Route path="/" element={<>
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
+          <Toaster position="top-right" richColors />
+          <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
+          <CommandPalette
+            open={isCommandPaletteOpen}
+            onOpenChange={setIsCommandPaletteOpen}
+            groups={commandGroups}
+            placeholder="Search commands, navigate..."
+            shortcut={['⌘', 'K']}
+          />
         <main id="main-content" tabIndex={-1} className="relative min-h-screen">
           <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
             <section className="dashboard-shell dashboard-card-scale-lg px-3 py-3 sm:px-4">
               <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
                 <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
                   <NeuralCartMark variant="halo" />
-                  <span>Cart-to-Purchase Workspace</span>
+                  <span>Cart-to-Purchase</span>
+                  <TypewriterText 
+                    words={['Workspace', 'Studio', 'Dashboard', 'Predictor']} 
+                    className="text-[hsl(var(--interactive))]"
+                    typingSpeed={80}
+                    deletingSpeed={40}
+                    pauseDuration={2000}
+                  />
                 </h1>
                 <div className="flex items-center gap-2">
                   <Link
@@ -166,6 +214,10 @@ function App() {
                   >
                     Dataset Explorer
                   </Link>
+                  <button type="button" onClick={() => setIsCommandPaletteOpen(true)} className="hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
+                    <Command className="h-4 w-4" />
+                    <span>⌘K</span>
+                  </button>
                   <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
                     {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
                     <span>{isSideRailOpen ? 'Hide' : 'Open'} rail</span>
