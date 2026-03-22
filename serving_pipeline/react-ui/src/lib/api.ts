@@ -12,10 +12,35 @@ import type {
 export type ExplainLevel = 'top' | 'full'
 
 const LOCAL_API_ROOT = 'http://127.0.0.1:8000'
+const API_ROOT_OVERRIDE_KEY = 'ctp_api_root_override'
+
+const normalizeApiRoot = (value: string): string => {
+  return value.trim().replace(/\/$/, '').replace(/\/predict\/?$/, '')
+}
+
+const getRuntimeApiRootOverride = (): string | null => {
+  if (typeof window === 'undefined') return null
+
+  const params = new URLSearchParams(window.location.search)
+  const queryApi = params.get('api')
+  if (queryApi) {
+    const normalized = normalizeApiRoot(queryApi)
+    window.localStorage.setItem(API_ROOT_OVERRIDE_KEY, normalized)
+    return normalized
+  }
+
+  const storedApi = window.localStorage.getItem(API_ROOT_OVERRIDE_KEY)
+  if (storedApi) return normalizeApiRoot(storedApi)
+
+  return null
+}
 
 const resolveDefaultApiRoot = (): string => {
+  const runtimeOverride = getRuntimeApiRootOverride()
+  if (runtimeOverride) return runtimeOverride
+
   const envBase = import.meta.env.VITE_API_BASE_URL?.trim()
-  if (envBase) return envBase.replace(/\/$/, '').replace(/\/predict\/?$/, '')
+  if (envBase) return normalizeApiRoot(envBase)
 
   if (typeof window === 'undefined') return LOCAL_API_ROOT
 
@@ -42,7 +67,7 @@ const resolveDefaultApiRoot = (): string => {
  */
 export const resolveApiRoot = (base?: string): string => {
   const url = base ?? resolveDefaultApiRoot()
-  return url.replace(/\/predict\/?$/, '')
+  return normalizeApiRoot(url)
 }
 
 export class ApiClientError extends Error {

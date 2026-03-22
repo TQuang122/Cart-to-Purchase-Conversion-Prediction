@@ -47,10 +47,6 @@ const starterMessages: ChatMessage[] = [
   },
 ]
 
-const SERVER_BASE_URL = resolveApiRoot()
-const CHAT_API_URL = `${SERVER_BASE_URL}/chat`
-const CHAT_IMAGE_API_URL = `${SERVER_BASE_URL}/chat/image`
-const CHAT_CHART_API_URL = `${SERVER_BASE_URL}/chat/chart`
 const SAVED_NOTES_STORAGE_KEY = 'prediction_assistant_saved_notes'
 
 const DEFAULT_PRESET_QUESTIONS_BY_CHART: Record<string, string[]> = {
@@ -86,6 +82,11 @@ const hasGroundingSignals = (text: string) => {
 }
 
 export function ChatbotWidget() {
+  const serverBaseUrl = useMemo(() => resolveApiRoot(), [])
+  const chatApiUrl = useMemo(() => `${serverBaseUrl}/chat`, [serverBaseUrl])
+  const chatImageApiUrl = useMemo(() => `${serverBaseUrl}/chat/image`, [serverBaseUrl])
+  const chatChartApiUrl = useMemo(() => `${serverBaseUrl}/chat/chart`, [serverBaseUrl])
+
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages)
@@ -226,7 +227,7 @@ export function ChatbotWidget() {
     try {
       let usedImageFallback = false
       let response = imageFile
-        ? await fetch(CHAT_IMAGE_API_URL, {
+        ? await fetch(chatImageApiUrl, {
             method: 'POST',
             body: (() => {
               const form = new FormData()
@@ -235,7 +236,7 @@ export function ChatbotWidget() {
               return form
             })(),
           })
-        : await fetch(CHAT_API_URL, {
+        : await fetch(chatApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: question }),
@@ -243,7 +244,7 @@ export function ChatbotWidget() {
 
       if (imageFile && response.status === 404) {
         usedImageFallback = true
-        response = await fetch(CHAT_API_URL, {
+          response = await fetch(chatApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: `${question}\n\n[Image attached but /chat/image is unavailable on server.]` }),
@@ -286,7 +287,7 @@ export function ChatbotWidget() {
         groundingMissing: replyText.length >= 80 && !hasGroundingSignals(replyText),
       })
     } catch {
-      pushAssistantReply(`Connection error. Please ensure backend is running at ${SERVER_BASE_URL}.`)
+      pushAssistantReply(`Connection error. Please ensure backend is running at ${serverBaseUrl}.`)
     } finally {
       setIsThinking(false)
     }
@@ -299,7 +300,7 @@ export function ChatbotWidget() {
       let response: Response
 
       if (chartEndpointSupport === 'supported' || chartEndpointSupport === 'unknown') {
-        response = await fetch(CHAT_CHART_API_URL, {
+        response = await fetch(chatChartApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -311,7 +312,7 @@ export function ChatbotWidget() {
       if (response.status === 404) {
         usedChartFallback = true
         setChartEndpointSupport('fallback')
-        response = await fetch(CHAT_API_URL, {
+          response = await fetch(chatApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -353,11 +354,11 @@ export function ChatbotWidget() {
         groundingMissing: replyText.length >= 80 && !hasGroundingSignals(replyText),
       })
     } catch {
-      pushAssistantReply(`Connection error. Please ensure backend is running at ${SERVER_BASE_URL}.`)
+      pushAssistantReply(`Connection error. Please ensure backend is running at ${serverBaseUrl}.`)
     } finally {
       setIsThinking(false)
     }
-  }, [chartEndpointSupport, pushAssistantReply])
+  }, [chartEndpointSupport, chatApiUrl, chatChartApiUrl, pushAssistantReply, serverBaseUrl])
 
   const dispatchChartAnalysis = useCallback((payload: ChartAnalyzeEventPayload, userText?: string) => {
     if (!payload.question || inFlightRef.current) return
@@ -429,7 +430,7 @@ export function ChatbotWidget() {
 
     const probeChartEndpoint = async () => {
       try {
-        const response = await fetch(CHAT_CHART_API_URL, { method: 'OPTIONS' })
+      const response = await fetch(chatChartApiUrl, { method: 'OPTIONS' })
         if (cancelled) return
         if (response.ok) {
           setChartEndpointSupport('supported')
@@ -467,7 +468,7 @@ export function ChatbotWidget() {
       cancelled = true
       window.removeEventListener('chatbot:analyze-chart', onAnalyzeChart as EventListener)
     }
-  }, [dispatchChartAnalysis, loadSavedNotes])
+  }, [chatChartApiUrl, dispatchChartAnalysis, loadSavedNotes])
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">

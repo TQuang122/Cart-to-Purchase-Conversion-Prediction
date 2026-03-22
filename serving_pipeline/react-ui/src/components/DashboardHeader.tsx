@@ -62,7 +62,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ 
-  apiBaseUrl = resolveApiRoot(),
+  apiBaseUrl,
   onStatsUpdate,
   onOpenIntro,
   layout = 'full',
