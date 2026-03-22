@@ -240,6 +240,7 @@ export function DashboardHeader({
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="tabicl">TabICL</SelectItem>
                   <SelectItem value="xgboost">XGBoost</SelectItem>
                   <SelectItem value="lightgbm">LightGBM</SelectItem>
                   <SelectItem value="catboost">CatBoost</SelectItem>
@@ -331,6 +332,7 @@ export function DashboardHeader({
                 <SelectValue placeholder="Select model" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="tabicl">TabICL</SelectItem>
                 <SelectItem value="xgboost">XGBoost</SelectItem>
                 <SelectItem value="lightgbm">LightGBM</SelectItem>
                 <SelectItem value="catboost">CatBoost</SelectItem>

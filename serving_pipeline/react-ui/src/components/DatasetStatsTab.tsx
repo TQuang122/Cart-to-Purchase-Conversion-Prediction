@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAppContext } from '@/contexts/AppContext'
-import { resolveApiRoot } from '@/lib/api'
+import { formatServingModelLabel, resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type {
   DatasetProfileResponse,
@@ -85,6 +85,7 @@ export function DatasetStatsTab() {
 
   useEffect(() => {
     let ignore = false
+    const selectedModelForApi = resolveServingModelForApi(state.selectedModel)
 
     const fetchDashboardData = async () => {
       setIsLoading(true)
@@ -94,10 +95,10 @@ export function DatasetStatsTab() {
         const responses = await Promise.all([
           fetch(`${apiRoot}/dataset/profile`),
           fetch(`${apiRoot}/dataset/quality`),
-          fetch(`${apiRoot}/model/overview?model=${state.selectedModel}`),
-          fetch(`${apiRoot}/model/architecture?model=${state.selectedModel}`),
-          fetch(`${apiRoot}/model/hyperparameters?model=${state.selectedModel}`),
-          fetch(`${apiRoot}/model/lineage?model=${state.selectedModel}`),
+          fetch(`${apiRoot}/model/overview?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/architecture?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/hyperparameters?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/lineage?model=${selectedModelForApi}`),
         ])
 
         const failing = responses.find((response) => !response.ok)
@@ -246,13 +247,13 @@ export function DatasetStatsTab() {
               tone="success"
               icon={<GitBranch className="h-4 w-4" />}
             />
-            <MetricTile
-              label="Current Threshold"
-              value={formatPercent(modelOverview?.current_threshold ? modelOverview.current_threshold * 100 : null)}
-              description={`Workspace selection is currently ${state.selectedModel.toUpperCase()}.`}
-              tone="warning"
-              icon={<SlidersHorizontal className="h-4 w-4" />}
-            />
+              <MetricTile
+                label="Current Threshold"
+                value={formatPercent(modelOverview?.current_threshold ? modelOverview.current_threshold * 100 : null)}
+                description={`Workspace selection is currently ${formatServingModelLabel(state.selectedModel)}.`}
+                tone="warning"
+                icon={<SlidersHorizontal className="h-4 w-4" />}
+              />
           </div>
         </CardContent>
       </Card>

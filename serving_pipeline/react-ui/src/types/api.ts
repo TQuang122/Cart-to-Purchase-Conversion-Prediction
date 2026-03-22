@@ -1,4 +1,5 @@
-export type ServingModel = 'xgboost' | 'lightgbm' | 'catboost'
+export type ApiServingModel = 'xgboost' | 'lightgbm' | 'catboost'
+export type ServingModel = ApiServingModel | 'tabicl'
 
 export interface CartInputRaw {
   price: number
@@ -56,7 +57,7 @@ export interface CartPrediction {
   probability: number | null
   actual_label?: number | null
   decision_threshold?: number
-  model_used?: ServingModel
+  model_used?: ApiServingModel
   feature_contributions?: FeatureContribution[]
   feature_quality?: FeatureQuality
   explainability?: ExplainabilityPayload
@@ -270,7 +271,7 @@ export interface DatasetConversionResponse {
 }
 
 export interface ModelOverviewResponse {
-  model_key: ServingModel
+  model_key: ApiServingModel
   model_name: string
   model_alias: string
   champion_version: string | null
@@ -284,7 +285,7 @@ export interface ModelOverviewResponse {
 }
 
 export interface ModelArchitectureResponse {
-  model_key: ServingModel
+  model_key: ApiServingModel
   model_type: string
   model_label: string
   description: string | null
@@ -307,7 +308,7 @@ export interface HyperparameterItem {
 }
 
 export interface ModelHyperparametersResponse {
-  model_key: ServingModel
+  model_key: ApiServingModel
   items: HyperparameterItem[]
 }
 
@@ -322,7 +323,7 @@ export interface ModelLineageVersion {
 }
 
 export interface ModelLineageResponse {
-  model_key: ServingModel
+  model_key: ApiServingModel
   model_name: string
   versions: ModelLineageVersion[]
 }

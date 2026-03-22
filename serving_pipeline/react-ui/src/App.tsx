@@ -15,6 +15,7 @@ import { Magnetic } from '@/components/ui/magnetic'
 import { RainbowButton } from '@/components/ui/rainbow-button'
 import { ScrollText } from '@/components/ui/scroll-text'
 import { useAppContext } from '@/contexts/AppContext'
+import { formatServingModelLabel } from '@/lib/api'
 
 type TabValue = 'raw' | 'batch' | 'feast'
 const TAB_QUERY_KEY = 'tab'
@@ -159,7 +160,7 @@ function App() {
 
   const sideRailContent = (
     <div className="space-y-3">
-      <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Context</CardTitle></CardHeader><CardContent className="pt-4 space-y-4"><div><p className="type-kicker">Model</p><p className="type-body mt-1 font-medium">{state.selectedModel}</p></div><div><p className="type-kicker">Threshold</p><p className="type-body mt-1 font-medium">{state.selectedThreshold}</p></div><div><p className="type-kicker">Hint</p><p className="type-body mt-1 text-text-secondary">{primaryHint[activeTab]}</p></div></CardContent></Card>
+      <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Context</CardTitle></CardHeader><CardContent className="pt-4 space-y-4"><div><p className="type-kicker">Model</p><p className="type-body mt-1 font-medium">{formatServingModelLabel(state.selectedModel)}</p></div><div><p className="type-kicker">Threshold</p><p className="type-body mt-1 font-medium">{state.selectedThreshold}</p></div><div><p className="type-kicker">Hint</p><p className="type-body mt-1 text-text-secondary">{primaryHint[activeTab]}</p></div></CardContent></Card>
       <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Controls</CardTitle></CardHeader><CardContent className="pt-4"><button type="button" onClick={handleOpenIntro} className="type-body w-full rounded-lg border border-border/80 bg-surface-2/80 px-3 py-2 text-left text-text-secondary hover:border-[hsl(var(--interactive)/0.48)] hover:bg-surface-2]">View intro</button></CardContent></Card>
     </div>
   )

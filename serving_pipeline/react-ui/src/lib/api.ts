@@ -1,4 +1,5 @@
 import type {
+  ApiServingModel,
   ApiErrorResponse,
   BatchPredictionResponse,
   CartInputFeast,
@@ -42,6 +43,26 @@ const resolveBaseUrl = (): string => {
 
 const API_BASE_URL = resolveBaseUrl()
 
+export const resolveServingModelForApi = (model: ServingModel): ApiServingModel => {
+  if (model === 'tabicl') return 'xgboost'
+  return model
+}
+
+export const formatServingModelLabel = (model: ServingModel): string => {
+  switch (model) {
+    case 'xgboost':
+      return 'XGBoost'
+    case 'lightgbm':
+      return 'LightGBM'
+    case 'catboost':
+      return 'CatBoost'
+    case 'tabicl':
+      return 'TabICL'
+    default:
+      return model
+  }
+}
+
 const appendPredictionQuery = (
   path: string,
   model: ServingModel,
@@ -50,7 +71,8 @@ const appendPredictionQuery = (
 ): string => {
   const separator = path.includes('?') ? '&' : '?'
   const clampedThreshold = Math.min(1, Math.max(0, Number(threshold)))
-  return `${path}${separator}model=${encodeURIComponent(model)}&threshold=${clampedThreshold.toFixed(4)}&explain_level=${explainLevel}`
+  const apiModel = resolveServingModelForApi(model)
+  return `${path}${separator}model=${encodeURIComponent(apiModel)}&threshold=${clampedThreshold.toFixed(4)}&explain_level=${explainLevel}`
 }
 
 const parseErrorMessage = async (response: Response): Promise<string> => {

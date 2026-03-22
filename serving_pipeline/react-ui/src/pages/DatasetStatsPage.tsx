@@ -23,7 +23,7 @@ import { BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, Shie
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { resolveApiRoot } from '@/lib/api'
+import { resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
 import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
@@ -270,6 +270,7 @@ export function DatasetStatsPage() {
 
   useEffect(() => {
     let ignore = false
+    const selectedModelForApi = resolveServingModelForApi(selectedModel)
 
     const fetchDashboardData = async () => {
       setIsLoading(true)
@@ -280,10 +281,10 @@ export function DatasetStatsPage() {
           fetch(`${apiRoot}/dataset/profile`),
           fetch(`${apiRoot}/dataset/quality`),
           fetch(`${apiRoot}/dataset/conversion`),
-          fetch(`${apiRoot}/model/overview?model=${selectedModel}`),
-          fetch(`${apiRoot}/model/architecture?model=${selectedModel}`),
-          fetch(`${apiRoot}/model/hyperparameters?model=${selectedModel}`),
-          fetch(`${apiRoot}/model/lineage?model=${selectedModel}`),
+          fetch(`${apiRoot}/model/overview?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/architecture?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/hyperparameters?model=${selectedModelForApi}`),
+          fetch(`${apiRoot}/model/lineage?model=${selectedModelForApi}`),
         ])
 
         const failing = responses.find((response) => !response.ok)
