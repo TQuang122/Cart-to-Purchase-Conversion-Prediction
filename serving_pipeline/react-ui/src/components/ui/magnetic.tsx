@@ -100,6 +100,7 @@ export function Magnetic({
   return (
     <motion.div
       ref={ref}
+      className="relative"
       onMouseEnter={actionArea === "self" ? handleMouseEnter : undefined}
       onMouseLeave={actionArea === "self" ? handleMouseLeave : undefined}
       style={{

@@ -45,7 +45,7 @@ export function AnimatedTooltip({
 }: AnimatedTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -203,17 +203,16 @@ export function AnimatedTooltip({
 
   return (
     <>
-      <button
+      <span
         ref={triggerRef}
         className={cn("inline-block", className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onFocus={handleMouseEnter}
         onBlur={handleMouseLeave}
-        type="button"
       >
         {children}
-      </button>
+      </span>
 
       <AnimatePresence>
         {isVisible && (

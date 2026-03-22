@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -11,7 +10,7 @@ interface MorphingTextProps {
 }
 
 const MorphingText = React.forwardRef<HTMLSpanElement, MorphingTextProps>(
-  ({ words, className, interval = 3000, animationDuration = 0.5 }, ref) => {
+  ({ words, className, interval = 3000 }, ref) => {
     const [currentIndex, setCurrentIndex] = React.useState(0);
 
     React.useEffect(() => {
@@ -23,18 +22,9 @@ const MorphingText = React.forwardRef<HTMLSpanElement, MorphingTextProps>(
 
     return (
       <span ref={ref} className="relative inline-block">
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={currentIndex}
-            initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -20, filter: "blur(8px)" }}
-            transition={{ duration: animationDuration, ease: "easeInOut" }}
-            className={cn("inline-block", className)}
-          >
-            {words[currentIndex]}
-          </motion.span>
-        </AnimatePresence>
+        <span key={currentIndex} className={cn("inline-block", className)}>
+          {words[currentIndex]}
+        </span>
       </span>
     );
   },

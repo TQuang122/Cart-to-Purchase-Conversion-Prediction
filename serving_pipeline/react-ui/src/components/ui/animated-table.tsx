@@ -841,7 +841,7 @@ export function AnimatedTable<T extends { id: string | number }>({
             </tr>
           </TableHeader>
           <TableBody>
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {loading ? (
                 Array.from({ length: loadingRows }).map((_, index) => (
                   <SkeletonRow

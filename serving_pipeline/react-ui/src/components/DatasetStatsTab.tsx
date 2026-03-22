@@ -285,7 +285,7 @@ export function DatasetStatsTab() {
                 <p className="type-kicker mb-2">Missing value hotspots</p>
                 {missingChartData.length > 0 ? (
                   <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
                       <BarChart data={missingChartData} layout="vertical" margin={{ top: 8, right: 12, left: 12, bottom: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
                         <XAxis type="number" tickFormatter={(value) => `${value}%`} stroke="hsl(var(--text-secondary))" />
@@ -345,7 +345,7 @@ export function DatasetStatsTab() {
                     </div>
                   </div>
                   <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
                       <BarChart data={snapshot.bins} margin={{ top: 8, right: 12, left: 0, bottom: 18 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.35)" />
                         <XAxis dataKey="label" angle={-20} textAnchor="end" height={48} stroke="hsl(var(--text-secondary))" interval={0} />

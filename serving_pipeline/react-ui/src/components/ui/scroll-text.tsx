@@ -113,12 +113,16 @@ const ScrollText = React.forwardRef<HTMLDivElement, ScrollTextProps>(
     },
     forwardedRef,
   ) => {
-    const internalRef = React.useRef<HTMLDivElement>(null);
-    const ref =
-      (forwardedRef as React.RefObject<HTMLDivElement>) || internalRef;
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
+    React.useImperativeHandle(
+      forwardedRef,
+      () => containerRef.current as HTMLDivElement,
+      [],
+    );
 
     const { scrollYProgress } = useScroll({
-      target: ref,
+      target: containerRef,
       offset: offset as ["start end", "end start"],
     });
 
@@ -231,8 +235,8 @@ const ScrollText = React.forwardRef<HTMLDivElement, ScrollTextProps>(
 
     return (
       <motion.div
-        ref={ref}
-        className={cn("will-change-transform", className)}
+        ref={containerRef}
+        className={cn("relative will-change-transform", className)}
         style={{
           ...effectStyles[effect],
           ...(effect === "blur" && { filter: filterBlur }),

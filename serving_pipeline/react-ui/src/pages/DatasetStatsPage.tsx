@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ComposedChart,
@@ -14,7 +14,6 @@ import {
   ZAxis,
   ReferenceDot,
   ReferenceLine,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -27,7 +26,6 @@ import { resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
 import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
-import { ScrollText } from '@/components/ui/scroll-text'
 import { useAppContext } from '@/contexts/AppContext'
 import { cn } from '@/lib/utils'
 import type {
@@ -72,6 +70,56 @@ const formatRatioPercent = (value: number) => `${(value * 100).toFixed(2)}%`
 const compactAxisLabel = (value: string, maxLength = 14) => {
   if (!value) return 'N/A'
   return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value
+}
+
+function ChartMountGate({
+  className,
+  children,
+}: {
+  className: string
+  children: (size: { width: number; height: number }) => React.ReactNode
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [isReady, setIsReady] = useState(false)
+  const [hasStableFrame, setHasStableFrame] = useState(false)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) return
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let rafId = 0
+    let rafId2 = 0
+
+    rafId = requestAnimationFrame(() => {
+      rafId2 = requestAnimationFrame(() => {
+        timeoutId = setTimeout(() => setHasStableFrame(true), 120)
+      })
+    })
+
+    const updateReadiness = () => {
+      const rect = element.getBoundingClientRect()
+      setSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) })
+      setIsReady(rect.width > 0 && rect.height > 0)
+    }
+
+    updateReadiness()
+    const observer = new ResizeObserver(updateReadiness)
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(rafId)
+      cancelAnimationFrame(rafId2)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [])
+
+  return (
+    <div ref={containerRef} className={className}>
+      {isReady && hasStableFrame ? children(size) : null}
+    </div>
+  )
 }
 
 interface MetricTileProps {
@@ -123,9 +171,9 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
         <CardDescription>Price histogram (8 bins)</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-            <BarChart data={data} margin={{ top: 8, right: 14, left: 0, bottom: 28 }} barCategoryGap="18%">
+        <ChartMountGate className="h-56">
+          {({ width, height }) => (
+            <BarChart width={width} height={height} data={data} margin={{ top: 8, right: 14, left: 0, bottom: 28 }} barCategoryGap="18%">
               <defs>
                 <linearGradient id="priceHistogramGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.95} />
@@ -173,8 +221,8 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
               />
               <Bar dataKey="value" fill="url(#priceHistogramGradient)" radius={[5, 5, 0, 0]} maxBarSize={52} />
             </BarChart>
-          </ResponsiveContainer>
-        </div>
+          )}
+        </ChartMountGate>
       </CardContent>
     </Card>
   )
@@ -199,9 +247,11 @@ function HorizontalBarChartCard({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartMountGate className="h-64">
+          {({ width, height }) => (
             <BarChart
+              width={width}
+              height={height}
               data={data}
               layout={layout}
               margin={{ top: 10, right: 20, left: layout === 'horizontal' ? -20 : 0, bottom: 0 }}
@@ -244,8 +294,8 @@ function HorizontalBarChartCard({
               <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={tooltipFormatter} />
               <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} barSize={20} />
             </BarChart>
-          </ResponsiveContainer>
-        </div>
+          )}
+        </ChartMountGate>
       </CardContent>
     </Card>
   )
@@ -520,7 +570,7 @@ export function DatasetStatsPage() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Overview KPIs - Power BI Style */}
         <section className="section-reveal section-delay-1 mb-6">
-          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Overview</ScrollText></h2>
+          <h2 className="type-heading mb-4 text-lg">Overview</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <MetricTile
               label="Total Rows"
@@ -576,7 +626,7 @@ export function DatasetStatsPage() {
         </section>
 
         <section className="section-reveal section-delay-2 mb-6">
-          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Conversion Behavior</ScrollText></h2>
+          <h2 className="type-heading mb-4 text-lg">Conversion Behavior</h2>
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="dashboard-card panel-accent lg:col-span-2">
               <CardHeader className="pb-2">
@@ -584,9 +634,9 @@ export function DatasetStatsPage() {
                 <CardDescription>Conversion rate by hour (15h - 23h)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                    <AreaChart data={hourlyPurchaseProbabilityData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <ChartMountGate className="h-64">
+                  {({ width, height }) => (
+                    <AreaChart width={width} height={height} data={hourlyPurchaseProbabilityData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="hourlyRateGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.32} />
@@ -611,8 +661,8 @@ export function DatasetStatsPage() {
                         strokeWidth={2}
                       />
                     </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ChartMountGate>
                 <p className="type-caption mt-2 text-right">
                   Golden Hour: <span className="font-semibold">{goldenHour.hour}h ({formatRatioPercent(goldenHour.rate)})</span>
                 </p>
@@ -625,9 +675,9 @@ export function DatasetStatsPage() {
                 <CardDescription>Volume by weekday</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                    <BarChart data={cartEventsByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <ChartMountGate className="h-64">
+                  {({ width, height }) => (
+                    <BarChart width={width} height={height} data={cartEventsByDay} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" vertical={false} />
                       <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
@@ -636,8 +686,8 @@ export function DatasetStatsPage() {
                         <LabelList dataKey="value" position="top" className="fill-foreground text-[10px]" />
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ChartMountGate>
               </CardContent>
             </Card>
           </div>
@@ -648,59 +698,63 @@ export function DatasetStatsPage() {
               <CardDescription>Distribution with median / mean markers</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="relative h-72">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                  <ComposedChart
-                    data={purchaseDecisionHistogramData}
-                    margin={{ top: 8, right: 12, left: 0, bottom: 24 }}
-                    barCategoryGap="0%"
-                    barGap={0}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" />
-                    <XAxis
-                      dataKey="minute"
-                      tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }}
-                      tickLine={false}
-                      height={54}
-                      label={{ value: 'Minutes after adding to cart', position: 'bottom', offset: 10 }}
-                    />
-                    <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
-                    <Tooltip
-                      contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
-                      formatter={(value: unknown) => [formatNumber(Number(value)), 'Orders']}
-                      labelFormatter={(label) => `Minute: ${label}`}
-                    />
-                    <Bar dataKey="volume" fill="hsl(var(--chart-3))" fillOpacity={0.42} stroke="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={28} />
-                    <Line type="monotone" dataKey="volume" stroke="hsl(var(--chart-4))" strokeWidth={2} dot={false} />
-                    <ReferenceLine
-                      x={decisionMedian}
-                      stroke="hsl(var(--chart-1))"
-                      strokeDasharray="6 4"
-                      strokeWidth={2}
-                      label={{ value: `Median: ${decisionMedian.toFixed(1)} min`, position: 'insideTopLeft', fill: 'hsl(var(--chart-1))' }}
-                    />
-                    <ReferenceLine
-                      x={decisionMean}
-                      stroke="hsl(var(--chart-2))"
-                      strokeDasharray="6 4"
-                      strokeWidth={2}
-                      label={{ value: `Mean: ${decisionMean.toFixed(1)} min`, position: 'insideTopRight', fill: 'hsl(var(--chart-2))' }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute right-4 top-4 rounded-lg border border-border/70 bg-card/80 px-3 py-2">
-                  <p className="type-caption text-right">
-                    Insight<br />
-                    <span className="font-semibold">{decisionWithinFiveRatio.toFixed(1)}%</span> customers complete checkout within the first 5 minutes
-                  </p>
-                </div>
-              </div>
+              <ChartMountGate className="relative h-72">
+                {({ width, height }) => (
+                  <>
+                    <ComposedChart
+                      width={width}
+                      height={height}
+                      data={purchaseDecisionHistogramData}
+                      margin={{ top: 8, right: 12, left: 0, bottom: 24 }}
+                      barCategoryGap="0%"
+                      barGap={0}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" />
+                      <XAxis
+                        dataKey="minute"
+                        tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }}
+                        tickLine={false}
+                        height={54}
+                        label={{ value: 'Minutes after adding to cart', position: 'bottom', offset: 10 }}
+                      />
+                      <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
+                      <Tooltip
+                        contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
+                        formatter={(value: unknown) => [formatNumber(Number(value)), 'Orders']}
+                        labelFormatter={(label) => `Minute: ${label}`}
+                      />
+                      <Bar dataKey="volume" fill="hsl(var(--chart-3))" fillOpacity={0.42} stroke="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={28} />
+                      <Line type="monotone" dataKey="volume" stroke="hsl(var(--chart-4))" strokeWidth={2} dot={false} />
+                      <ReferenceLine
+                        x={decisionMedian}
+                        stroke="hsl(var(--chart-1))"
+                        strokeDasharray="6 4"
+                        strokeWidth={2}
+                        label={{ value: `Median: ${decisionMedian.toFixed(1)} min`, position: 'insideTopLeft', fill: 'hsl(var(--chart-1))' }}
+                      />
+                      <ReferenceLine
+                        x={decisionMean}
+                        stroke="hsl(var(--chart-2))"
+                        strokeDasharray="6 4"
+                        strokeWidth={2}
+                        label={{ value: `Mean: ${decisionMean.toFixed(1)} min`, position: 'insideTopRight', fill: 'hsl(var(--chart-2))' }}
+                      />
+                    </ComposedChart>
+                    <div className="pointer-events-none absolute right-4 top-4 rounded-lg border border-border/70 bg-card/80 px-3 py-2">
+                      <p className="type-caption text-right">
+                        Insight<br />
+                        <span className="font-semibold">{decisionWithinFiveRatio.toFixed(1)}%</span> customers complete checkout within the first 5 minutes
+                      </p>
+                    </div>
+                  </>
+                )}
+              </ChartMountGate>
             </CardContent>
           </Card>
         </section>
 
         <section className="section-reveal section-delay-3 mb-6">
-          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Conversion Funnel & Brand Efficiency</ScrollText></h2>
+          <h2 className="type-heading mb-4 text-lg">Conversion Funnel & Brand Efficiency</h2>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
@@ -708,9 +762,9 @@ export function DatasetStatsPage() {
                 <CardDescription>View → Cart → Purchase (% relative to views)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                    <BarChart data={conversionFunnelDisplayData} margin={{ top: 34, right: 16, left: 10, bottom: 0 }}>
+                <ChartMountGate className="h-64">
+                  {({ width, height }) => (
+                    <BarChart width={width} height={height} data={conversionFunnelDisplayData} margin={{ top: 34, right: 16, left: 10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" vertical={false} />
                       <XAxis dataKey="stage" tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <YAxis
@@ -737,8 +791,8 @@ export function DatasetStatsPage() {
                         />
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ChartMountGate>
               </CardContent>
             </Card>
 
@@ -748,9 +802,9 @@ export function DatasetStatsPage() {
                 <CardDescription>Estimated purchase rate by brand share</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                    <BarChart data={brandConversionRateData} layout="vertical" margin={{ top: 8, right: 16, left: 24, bottom: 0 }}>
+                <ChartMountGate className="h-64">
+                  {({ width, height }) => (
+                    <BarChart width={width} height={height} data={brandConversionRateData} layout="vertical" margin={{ top: 8, right: 16, left: 24, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" />
                       <XAxis
                         type="number"
@@ -777,8 +831,8 @@ export function DatasetStatsPage() {
                         />
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ChartMountGate>
               </CardContent>
             </Card>
           </div>
@@ -786,7 +840,7 @@ export function DatasetStatsPage() {
 
         {/* Data Distribution Section - Power BI Style */}
         <section className="section-reveal section-delay-4 mb-6">
-          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Data Distribution</ScrollText></h2>
+          <h2 className="type-heading mb-4 text-lg">Data Distribution</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Horizontal Bar - Category Level 1 */}
             <HorizontalBarChartCard
@@ -803,9 +857,9 @@ export function DatasetStatsPage() {
                 <CardDescription>Bubble size encodes purchase volume</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={120}>
-                    <ScatterChart margin={{ top: 8, right: 16, left: 8, bottom: 6 }}>
+                <ChartMountGate className="h-56">
+                  {({ width, height }) => (
+                    <ScatterChart width={width} height={height} margin={{ top: 8, right: 16, left: 8, bottom: 6 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" />
                       <XAxis
                         type="number"
@@ -835,8 +889,8 @@ export function DatasetStatsPage() {
                       />
                       <Scatter data={brandEfficiencyScatterData} fill="hsl(var(--chart-4))" fillOpacity={0.55} stroke="hsl(var(--chart-4))" />
                     </ScatterChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ChartMountGate>
               </CardContent>
             </Card>
 
@@ -851,7 +905,7 @@ export function DatasetStatsPage() {
 
         {/* Model Section - Power BI Style */}
         <section className="section-reveal section-delay-5">
-          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Model Intelligence</ScrollText></h2>
+          <h2 className="type-heading mb-4 text-lg">Model Intelligence</h2>
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Architecture Card */}
             <Card className="dashboard-card panel-accent">

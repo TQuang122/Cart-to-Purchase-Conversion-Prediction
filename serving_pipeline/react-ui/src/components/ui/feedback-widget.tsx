@@ -170,7 +170,7 @@ export function FeedbackWidget({
         transition={springTransition}
         initial={false}
         className={cn(
-          "overflow-hidden border border-zinc-200 bg-white text-zinc-900 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] dark:border-white/10 dark:bg-zinc-950 dark:text-white dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]",
+          "relative overflow-hidden border border-zinc-200 bg-white text-zinc-900 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] dark:border-white/10 dark:bg-zinc-950 dark:text-white dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)]",
           isExpanded ? "w-full max-w-[420px] rounded-[28px]" : "rounded-full",
         )}
       >
