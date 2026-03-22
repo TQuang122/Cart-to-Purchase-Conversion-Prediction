@@ -23,7 +23,8 @@ import { BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, Shie
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AnimatedTable } from '@/components/ui/animated-table'
+import { HighlightText } from '@/components/ui/highlight-text'
 import { cn } from '@/lib/utils'
 import type {
   DatasetConversionResponse,
@@ -88,7 +89,7 @@ const compactAxisLabel = (value: string, maxLength = 14) => {
 
 interface MetricTileProps {
   label: string
-  value: string
+  value: React.ReactNode
   description: string
   tone: 'info' | 'success' | 'warning' | 'error'
   icon: React.ReactNode
@@ -563,14 +564,22 @@ export function DatasetStatsPage() {
             />
             <MetricTile
               label="Best CV F1"
-              value={modelOverview?.best_cv_f1?.toFixed(4) ?? 'N/A'}
+              value={
+                <HighlightText variant="underline" color="primary" animationDuration={1}>
+                  {modelOverview?.best_cv_f1?.toFixed(4) ?? 'N/A'}
+                </HighlightText>
+              }
               description="Cross-validation score"
               tone="info"
               icon={<SlidersHorizontal className="h-5 w-5 text-[hsl(var(--info-contrast))]" />}
             />
             <MetricTile
               label="Threshold"
-              value={modelOverview?.current_threshold?.toFixed(3) ?? 'N/A'}
+              value={
+                <HighlightText variant="marker" color="accent">
+                  {modelOverview?.current_threshold?.toFixed(3) ?? 'N/A'}
+                </HighlightText>
+              }
               description="Prediction threshold"
               tone="info"
               icon={<Settings2 className="h-5 w-5 text-[hsl(var(--info-contrast))]" />}
@@ -919,21 +928,18 @@ export function DatasetStatsPage() {
                 <CardDescription>Current model configuration</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-64 overflow-auto">
-                  <Table>
-                    <TableBody>
-                      {(hyperparameters?.items || []).map((param) => (
-                        <TableRow key={param.key}>
-                          <TableCell className="font-mono text-xs font-medium text-[hsl(var(--text-primary))]">
-                            {param.key}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-[hsl(var(--text-secondary))]">{param.value}</TableCell>
-                          <TableCell className="type-caption uppercase">{param.source}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <AnimatedTable
+                  data={(hyperparameters?.items || []).map((param, i) => ({ id: param.key || i, ...param }))}
+                  columns={[
+                    { id: 'key', header: 'Parameter', accessorKey: 'key' as const, sortable: true },
+                    { id: 'value', header: 'Value', accessorKey: 'value' as const, sortable: true },
+                    { id: 'source', header: 'Source', accessorKey: 'source' as const, align: 'right' as const },
+                  ]}
+                  searchable
+                  searchPlaceholder="Search parameters..."
+                  className="max-h-64"
+                  emptyMessage="No hyperparameters available"
+                />
               </CardContent>
             </Card>
 
@@ -947,32 +953,19 @@ export function DatasetStatsPage() {
                 <CardDescription>Version history from MLflow</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="max-h-64 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Version</TableHead>
-                        <TableHead>Aliases</TableHead>
-                        <TableHead>Run ID</TableHead>
-                        <TableHead>Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(lineage?.versions || []).slice(0, 8).map((version) => (
-                        <TableRow key={version.version}>
-                          <TableCell className="font-medium text-[hsl(var(--text-primary))]">v{version.version}</TableCell>
-                          <TableCell className="text-[hsl(var(--text-secondary))]">
-                            {version.aliases.length > 0 ? version.aliases.join(', ') : version.stage ?? '—'}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-[hsl(var(--text-secondary))]">
-                            {version.run_id ?? 'Unavailable'}
-                          </TableCell>
-                          <TableCell className="text-[hsl(var(--text-secondary))]">{formatDateTime(version.created_at)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <AnimatedTable
+                  data={(lineage?.versions || []).slice(0, 8).map((v, i) => ({ id: v.version || String(i), ...v }))}
+                  columns={[
+                    { id: 'version', header: 'Version', cell: (_row, i) => `v${i + 1}` },
+                    { id: 'aliases', header: 'Aliases', cell: (row) => row.aliases?.length > 0 ? row.aliases.join(', ') : row.stage ?? '—' },
+                    { id: 'run_id', header: 'Run ID', cell: (row) => row.run_id ?? 'Unavailable', sortable: true },
+                    { id: 'created_at', header: 'Created', cell: (row) => formatDateTime(row.created_at), sortable: true },
+                  ]}
+                  searchable
+                  searchPlaceholder="Search versions..."
+                  className="max-h-64"
+                  emptyMessage="No model versions available"
+                />
                 {modelOverview?.load_error ? (
                   <div className="state-banner state-banner-warning mt-3">
                     <ShieldAlert className="h-4 w-4 text-[hsl(var(--warning))]" />
