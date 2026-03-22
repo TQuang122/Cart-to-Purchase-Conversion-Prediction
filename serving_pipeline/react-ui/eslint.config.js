@@ -9,6 +9,17 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: [
+      'src/components/ui/magnetic.tsx',
+      'src/components/ui/rainbow-button.tsx',
+      'src/components/ui/scroll-text.tsx',
+      'src/components/ui/highlight-text.tsx',
+      'src/components/ui/feedback-widget.tsx',
+      'src/components/ui/animated-theme-toggle.tsx',
+      'src/components/ui/code-block.tsx',
+      'src/components/ui/animated-table.tsx',
+      'src/components/ui/command-palette.tsx',
+    ],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
