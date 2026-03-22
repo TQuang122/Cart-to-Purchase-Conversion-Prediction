@@ -170,7 +170,7 @@ export const FeastLookupTab = () => {
         </div>
         <CardTitle className="readable-title text-xl sm:text-[1.36rem]">Feast Lookup Prediction</CardTitle>
         <CardDescription className="readable-description">
-          Query online features using entity keys, then run prediction with Feast-backed data.
+          Query online features and run prediction.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-7 sm:pt-8">

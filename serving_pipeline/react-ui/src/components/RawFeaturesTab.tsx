@@ -251,7 +251,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
       <CardHeader className="space-y-3 border-b border-border/60 bg-surface-2/65 pb-5">
         <div className="state-text-success flex items-center gap-2"><BrainCircuit className="h-4 w-4" /><span className="type-kicker">Minimal Input Inference</span></div>
         <CardTitle className="readable-title text-xl sm:text-[1.36rem]">Raw Features Prediction</CardTitle>
-        <CardDescription className="readable-description">Enter only core fields. Remaining features are automatically preprocessed on the server before prediction.</CardDescription>
+        <CardDescription className="readable-description">Enter core fields to run prediction.</CardDescription>
       </CardHeader>
       <CardContent className="pt-7 sm:pt-8">
         <Form {...form}>
@@ -315,7 +315,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="type-heading text-sm font-semibold">Ready to run prediction</p>
-                  <p className="readable-helper">Shortcut: Ctrl+Enter | Backend auto-computes derived features before inference.</p>
+                  <p className="readable-helper">Shortcut: Ctrl+Enter</p>
                   <p className="type-caption" aria-live="polite">{draftSavedLabel}</p>
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
