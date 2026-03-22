@@ -14,8 +14,8 @@ spec:
   template:
     metadata:
       labels:
-    app: serving-api
-    version: "1.0.0"
+        app: serving-api
+        version: "1.0.0"
     spec:
       initContainers:
         - name: download-model
