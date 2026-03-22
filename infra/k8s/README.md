@@ -108,6 +108,32 @@ kubectl proxy
 ./teardown.sh
 ```
 
+## Backup and Restore Runbook
+
+Use the automation scripts in this directory to keep backup/restore reproducible.
+
+```bash
+# Full backup to ./backups
+./backup.sh
+
+# Verify existing backup files only
+./backup.sh --verify-only
+
+# Full restore (recreate cluster, restore data, redeploy serving, verify)
+./restore.sh
+
+# Fast restore for dev (reuse existing cluster, skip serving redeploy)
+./restore.sh --skip-recreate --skip-serving
+
+# Verify current runtime only
+./restore.sh --verify-only
+```
+
+Flags:
+- `--skip-recreate`: skip deleting/creating KinD cluster
+- `--skip-serving`: skip serving image load/deploy and serving endpoint checks
+- `--verify-only`: run validation checks only, no restore actions
+
 ## Configuration
 
 ### Default Credentials
@@ -138,6 +164,8 @@ k8s/
 ├── namespace.yaml                  # MLOps namespace definition
 ├── deploy.sh                       # Automated MLOps deployment script
 ├── teardown.sh                     # Automated MLOps teardown script
+├── backup.sh                       # One-command backup workflow
+├── restore.sh                      # One-command restore workflow
 ├── README.md                       # This file
 ├── postgres/
 │   ├── postgres-secret.yaml        # PostgreSQL credentials

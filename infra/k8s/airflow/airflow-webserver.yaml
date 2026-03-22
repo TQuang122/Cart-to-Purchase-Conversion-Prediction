@@ -102,7 +102,7 @@ spec:
           mountPath: /opt/airflow
         - name: logs
           mountPath: /opt/airflow/logs
-        - name: passwords-rw
+        - name: passwords-ro
           mountPath: /opt/airflow/simple_auth_manager_passwords.json.generated
           subPath: simple_auth_manager_passwords.json.generated
         resources:
@@ -139,8 +139,6 @@ spec:
         secret:
           secretName: airflow-passwords
           defaultMode: 0644
-      - name: passwords-rw
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

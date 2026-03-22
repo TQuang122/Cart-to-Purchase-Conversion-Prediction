@@ -37,6 +37,7 @@ spec:
           mlflow server \
             --host 0.0.0.0 \
             --port 5000 \
+            --allowed-hosts '*' \
             --backend-store-uri postgresql://mlflow:mlflow123@postgres:5432/mlflow \
             --default-artifact-root s3://mlflow/
         env:
@@ -64,13 +65,13 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 5000
           initialDelaySeconds: 60
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            path: /
             port: 5000
           initialDelaySeconds: 10
           periodSeconds: 5
