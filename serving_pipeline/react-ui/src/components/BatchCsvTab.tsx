@@ -530,7 +530,7 @@ export const BatchCsvTab = () => {
 
         {results.length > 0 ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+            <div aria-live="polite" aria-atomic="false" className="grid grid-cols-1 gap-3 md:grid-cols-5">
               {[
                 {
                   key: 'total',

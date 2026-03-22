@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import { resolveApiRoot } from '@/lib/api'
 import { BookOpen, Bot, Copy, Download, ImagePlus, MessageCircle, Send, Trash2, X } from 'lucide-react'
 
 type ChatRole = 'assistant' | 'user'
@@ -45,15 +47,7 @@ const starterMessages: ChatMessage[] = [
   },
 ]
 
-const DEFAULT_SERVER_BASE_URL = 'http://127.0.0.1:8000'
-
-const resolveServerBaseUrl = () => {
-  const envBase = import.meta.env.VITE_API_BASE_URL
-  if (!envBase || typeof envBase !== 'string') return DEFAULT_SERVER_BASE_URL
-  return envBase.replace(/\/predict\/?$/, '')
-}
-
-const SERVER_BASE_URL = resolveServerBaseUrl()
+const SERVER_BASE_URL = resolveApiRoot()
 const CHAT_API_URL = `${SERVER_BASE_URL}/chat`
 const CHAT_IMAGE_API_URL = `${SERVER_BASE_URL}/chat/image`
 const CHAT_CHART_API_URL = `${SERVER_BASE_URL}/chat/chart`

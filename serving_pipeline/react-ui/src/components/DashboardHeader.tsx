@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { 
   TrendingUp, 
   Activity, 
@@ -20,6 +20,8 @@ import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid'
 import { StatCounter, CircularCounter } from '@/components/ui/number-counter'
 import SegmentedButton from '@/components/ui/segmented-button'
 import { AnimatedTooltip } from '@/components/ui/animated-tooltip'
+import { resolveApiRoot } from '@/lib/api'
+import { ANIMATION_DURATION_MS, ANIMATION_STEPS, STATS_FETCH_TIMEOUT_MS, STATS_REFRESH_INTERVAL_MS, THRESHOLD_PRESETS } from '@/lib/thresholdConfig'
 import type { ServingModel } from '@/types/api'
 
 export interface StatsData {
@@ -70,19 +72,21 @@ export function DashboardHeader({
   onThresholdChange,
 }: DashboardHeaderProps) {
   // Normalize: always strip trailing /predict so we can consistently append it
-  const resolvedBaseUrl = (apiBaseUrl ?? 'http://127.0.0.1:8000').replace(/\/predict\/?$/, '')
+  const resolvedBaseUrl = resolveApiRoot(apiBaseUrl)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading')
   const [animatedPredictions, setAnimatedPredictions] = useState(0)
   const [animatedRate, setAnimatedRate] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
+  const thresholdDebounceRef = useRef<number | null>(null)
+  const THRESHOLD_DEBOUNCE_MS = 300
 
   const fetchStats = useCallback(async () => {
     setIsRefreshing(true)
     try {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS)
       const response = await fetch(`${resolvedBaseUrl}/predict/stats`, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (response.ok) {
@@ -103,23 +107,21 @@ export function DashboardHeader({
 
   useEffect(() => {
     fetchStats()
-    const interval = setInterval(fetchStats, 10000)
+    const interval = setInterval(fetchStats, STATS_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchStats])
 
   useEffect(() => {
     if (stats) {
-      const duration = 1000
-      const steps = 30
-      const stepDuration = duration / steps
-      const predictionsIncrement = (stats.total_predictions - animatedPredictions) / steps
-      const rateIncrement = (stats.success_rate - animatedRate) / steps
+      const stepDuration = ANIMATION_DURATION_MS / ANIMATION_STEPS
+      const predictionsIncrement = (stats.total_predictions - animatedPredictions) / ANIMATION_STEPS
+      const rateIncrement = (stats.success_rate - animatedRate) / ANIMATION_STEPS
       let step = 0
       const timer = setInterval(() => {
         step++
         setAnimatedPredictions(Math.round(animatedPredictions + predictionsIncrement * step))
         setAnimatedRate(Math.round((animatedRate + rateIncrement * step) * 10) / 10)
-        if (step >= steps) {
+        if (step >= ANIMATION_STEPS) {
           clearInterval(timer)
           setAnimatedPredictions(stats.total_predictions)
           setAnimatedRate(stats.success_rate)
@@ -187,19 +189,24 @@ export function DashboardHeader({
   const clampedThreshold = Math.min(1, Math.max(0, selectedThreshold))
   const thresholdLabel = `${(clampedThreshold * 100).toFixed(1)}%`
   const thresholdExplainer = useMemo(() => {
-    if (clampedThreshold < 0.45) {
+    if (clampedThreshold < THRESHOLD_PRESETS.LOW.max) {
       return 'Low threshold: captures more potential buyers, but may increase false positives.'
     }
-    if (clampedThreshold <= 0.6) {
+    if (clampedThreshold <= THRESHOLD_PRESETS.HIGH.min) {
       return 'Balanced threshold: keeps a practical tradeoff between reach and precision.'
     }
     return 'High threshold: improves precision, but may miss borderline purchase intent.'
   }, [clampedThreshold])
 
   const handleThresholdInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextValue = Number(event.target.value)
-    if (Number.isNaN(nextValue)) return
-    onThresholdChange(Math.min(1, Math.max(0, nextValue)))
+    if (thresholdDebounceRef.current) {
+      window.clearTimeout(thresholdDebounceRef.current)
+    }
+    thresholdDebounceRef.current = window.setTimeout(() => {
+      const nextValue = Number(event.target.value)
+      if (Number.isNaN(nextValue)) return
+      onThresholdChange(Math.min(1, Math.max(0, nextValue)))
+    }, THRESHOLD_DEBOUNCE_MS)
   }
 
   return (
@@ -263,12 +270,16 @@ export function DashboardHeader({
                       { id: 'high', label: 'High' },
                     ]}
                     defaultActive={
-                      clampedThreshold < 0.45 ? 'low' : 
-                      clampedThreshold > 0.6 ? 'high' : 'balanced'
+                      clampedThreshold < THRESHOLD_PRESETS.LOW.max ? 'low' :
+                      clampedThreshold > THRESHOLD_PRESETS.HIGH.min ? 'high' : 'balanced'
                     }
                     onChange={(id) => {
-                      const values = { low: 0.4, balanced: 0.525, high: 0.65 }
-                      onThresholdChange(values[id as keyof typeof values] ?? 0.525)
+                      const values = {
+                        low: THRESHOLD_PRESETS.LOW.value,
+                        balanced: THRESHOLD_PRESETS.BALANCED.value,
+                        high: THRESHOLD_PRESETS.HIGH.value,
+                      }
+                      onThresholdChange(values[id as keyof typeof values] ?? THRESHOLD_PRESETS.BALANCED.value)
                     }}
                     className="w-full"
                   />

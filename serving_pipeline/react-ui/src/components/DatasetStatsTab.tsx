@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAppContext } from '@/contexts/AppContext'
+import { resolveApiRoot } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type {
   DatasetProfileResponse,
@@ -71,7 +72,7 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
 
 export function DatasetStatsTab() {
   const { state } = useAppContext()
-  const apiRoot = useMemo(() => state.apiBaseUrl.replace(/\/predict\/?$/, ''), [state.apiBaseUrl])
+  const apiRoot = useMemo(() => resolveApiRoot(state.apiBaseUrl), [state.apiBaseUrl])
 
   const [profile, setProfile] = useState<DatasetProfileResponse | null>(null)
   const [quality, setQuality] = useState<DatasetQualityResponse | null>(null)

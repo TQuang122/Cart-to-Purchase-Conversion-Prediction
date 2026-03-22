@@ -23,6 +23,8 @@ import { BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, Shie
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { resolveApiRoot } from '@/lib/api'
+import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
 import { cn } from '@/lib/utils'
@@ -35,23 +37,6 @@ import type {
   ModelLineageResponse,
   ModelOverviewResponse,
 } from '@/types/api'
-
-// Power BI Style Chart Colors using HSL design system
-const CHART_COLORS = [
-  'hsl(160, 84%, 34%)', // primary/interactive - emerald
-  'hsl(186, 78%, 41%)', // info - cyan
-  'hsl(37, 92%, 50%)',  // warning - amber
-  'hsl(345, 82%, 58%)', // error - rose
-  'hsl(220, 16%, 58%)', // muted - slate
-]
-
-const CHART_TOOLTIP_CONTENT_STYLE = {
-  backgroundColor: 'hsl(var(--surface-1) / 0.99)',
-  border: '1px solid hsl(var(--border) / 0.84)',
-  borderRadius: '0.75rem',
-  color: 'hsl(var(--text-primary))',
-  boxShadow: '0 22px 42px -26px rgba(2, 6, 23, 0.9)',
-}
 
 const formatPercent = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return 'Unavailable'
@@ -267,8 +252,7 @@ function HorizontalBarChartCard({
 
 export function DatasetStatsPage() {
   const [searchParams] = useSearchParams()
-  const apiBaseUrl = searchParams.get('api') || (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000')
-  const apiRoot = apiBaseUrl.replace(/\/predict\/?$/, '')
+  const apiRoot = resolveApiRoot(searchParams.get('api') ?? undefined)
   const selectedModel = 'xgboost'
 
   const [profile, setProfile] = useState<DatasetProfileResponse | null>(null)

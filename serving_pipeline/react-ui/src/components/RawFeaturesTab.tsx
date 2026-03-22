@@ -136,7 +136,7 @@ const featureGroups: FeatureGroup[] = ['event', 'user', 'product', 'category']
 const RAW_DRAFT_KEY = 'c2p_raw_draft_v1'
 
 export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: RawFeaturesTabProps) => {
-  const form = useForm<RawFeaturesFormValues>({ resolver: zodResolver(rawLiteSchema), defaultValues, mode: 'onBlur' })
+  const form = useForm<RawFeaturesFormValues>({ resolver: zodResolver(rawLiteSchema), defaultValues, mode: 'onTouched' })
   const { apiClient, dispatch, isLoading, state } = useAppContext()
   const [prediction, setPrediction] = useState<CartPrediction | null>(null)
   const [previousPrediction, setPreviousPrediction] = useState<CartPrediction | null>(null)
