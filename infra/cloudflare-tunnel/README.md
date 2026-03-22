@@ -136,8 +136,12 @@ Once tunnel is active, these are available:
 - Verify: `cloudflared --version`
 
 **Frontend shows CORS errors**
-- The backend CORS is configured to allow all origins for development
-- For production, set `ALLOWED_ORIGINS` env var
+- The backend CORS is configured from `CORS_ORIGINS` and `CORS_ORIGIN_REGEX`
+- For production, set `CORS_ORIGINS` and optionally `CORS_ORIGIN_REGEX`
+
+**Vercel page shows "Request Access"**
+- This is Vercel deployment protection, not backend CORS
+- Disable/adjust access controls in Vercel project Deployment Protection settings
 
 ## Stopping the Tunnel
 
@@ -145,7 +149,10 @@ Once tunnel is active, these are available:
 # Press Ctrl+C in the tunnel terminal
 
 # Or kill by PID:
-kill $(cat /tmp/cloudflare-tunnel-ctp-url.txt 2>/dev/null || echo "")
+if [ -s "/tmp/cloudflare-tunnel-ctp.pid" ]; then
+  kill "$(cat /tmp/cloudflare-tunnel-ctp.pid)" 2>/dev/null || true
+  rm -f /tmp/cloudflare-tunnel-ctp.pid
+fi
 ```
 
 ## Architecture Summary

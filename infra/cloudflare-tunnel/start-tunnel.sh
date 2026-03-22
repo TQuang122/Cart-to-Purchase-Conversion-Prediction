@@ -15,11 +15,14 @@
 #   Example: ./start-tunnel.sh 8000
 # ============================================================
 
-set -e
+set -euo pipefail
 
 PORT="${1:-8000}"
 LOGFILE="/tmp/cloudflare-tunnel-ctp.log"
+URLFILE="/tmp/cloudflare-tunnel-ctp-url.txt"
+PIDFILE="/tmp/cloudflare-tunnel-ctp.pid"
 TUNNEL_URL=""
+METRICS_PORT="${CLOUDFLARE_TUNNEL_METRICS_PORT:-53121}"
 
 # Colors
 RED='\033[0;31m'
@@ -32,6 +35,8 @@ echo -e "${GREEN}  Cart-to-Purchase Cloudflare Tunnel${NC}"
 echo -e "${GREEN}==========================================${NC}"
 echo -e "  Local port: $PORT"
 echo -e "  Log file:  $LOGFILE"
+echo -e "  URL file:  $URLFILE"
+echo -e "  PID file:  $PIDFILE"
 echo ""
 
 # ---- Check cloudflared installed ----
@@ -47,6 +52,19 @@ if ! command -v cloudflared &>/dev/null; then
 fi
 
 echo -e "${GREEN}cloudflared found${NC}"
+
+if [ -f "$PIDFILE" ]; then
+    PREV_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+    if [ -n "$PREV_PID" ] && kill -0 "$PREV_PID" 2>/dev/null; then
+        echo -e "${YELLOW}Stopping previous tunnel process (PID: $PREV_PID)${NC}"
+        kill "$PREV_PID" 2>/dev/null || true
+        sleep 1
+    fi
+    rm -f "$PIDFILE"
+fi
+
+pkill -f "cloudflared tunnel --url http://127.0.0.1:$PORT" 2>/dev/null || true
+sleep 1
 
 # ---- Check local server ----
 if ! curl -s --max-time 3 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
@@ -71,30 +89,32 @@ echo ""
 
 # Remove old log
 rm -f "$LOGFILE"
+rm -f "$URLFILE"
 
 # Start cloudflared tunnel in background
 cloudflared tunnel --url "http://127.0.0.1:$PORT" \
     --logfile "$LOGFILE" \
-    --metrics "localhost:53121" \
+    --metrics "localhost:$METRICS_PORT" \
+    --protocol http2 \
     2>&1 &
 
 TUNNEL_PID=$!
+echo "$TUNNEL_PID" > "$PIDFILE"
 
-# Wait for tunnel to initialize
-sleep 8
-
-# Extract tunnel URL from log
-if [ -f "$LOGFILE" ]; then
-    TUNNEL_URL=$(grep -o 'https://[^ "]*.trycloudflare.com' "$LOGFILE" 2>/dev/null | head -1)
-fi
-
-# Fallback: try again after more time
-if [ -z "$TUNNEL_URL" ]; then
-    sleep 5
+ATTEMPTS=24
+for _ in $(seq 1 "$ATTEMPTS"); do
     if [ -f "$LOGFILE" ]; then
-        TUNNEL_URL=$(grep -o 'https://[^ "]*.trycloudflare.com' "$LOGFILE" 2>/dev/null | head -1)
+        TUNNEL_URL=$(grep -o 'https://[^ "]*.trycloudflare.com' "$LOGFILE" 2>/dev/null | head -1 || true)
     fi
-fi
+
+    if [ -n "$TUNNEL_URL" ]; then
+        if curl -sS --max-time 4 "$TUNNEL_URL/health" >/dev/null 2>&1; then
+            break
+        fi
+    fi
+
+    sleep 2
+done
 
 # ---- Display results ----
 if [ -n "$TUNNEL_URL" ]; then
@@ -120,13 +140,17 @@ if [ -n "$TUNNEL_URL" ]; then
     echo ""
 
     # Write URL to convenient file
-    echo "$TUNNEL_URL" > /tmp/cloudflare-tunnel-ctp-url.txt
-    echo "Tunnel URL saved to /tmp/cloudflare-tunnel-ctp-url.txt"
+    echo "$TUNNEL_URL" > "$URLFILE"
+    echo "Tunnel URL saved to $URLFILE"
 else
-    echo -e "${YELLOW}Could not detect tunnel URL. Check $LOGFILE${NC}"
+    echo -e "${YELLOW}Could not obtain a reachable tunnel URL. Check $LOGFILE${NC}"
+    echo "Common fixes:"
+    echo "  1) Restart network/VPN"
+    echo "  2) Re-run this script to rotate URL"
+    echo "  3) Use named tunnel for stable production URL"
 fi
 
 # ---- Wait for tunnel process ----
 echo "Tunnel PID: $TUNNEL_PID"
-trap "echo 'Stopping tunnel...'; kill $TUNNEL_PID 2>/dev/null; exit 0" INT TERM
+trap "echo 'Stopping tunnel...'; kill $TUNNEL_PID 2>/dev/null || true; rm -f '$PIDFILE'; exit 0" INT TERM
 wait $TUNNEL_PID
