@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { BrainCircuit, Sparkles } from 'lucide-react'
+import { BrainCircuit } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError } from '@/lib/api'
@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatusBanner } from '@/components/ui/status-banner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 const rawLiteSchema = z.object({
@@ -89,6 +90,15 @@ const FEATURE_LABEL_OVERRIDES: Partial<Record<LiteFeatureName, string>> = {
 const formatFeatureLabel = (featureName: LiteFeatureName) => {
   if (FEATURE_LABEL_OVERRIDES[featureName]) return FEATURE_LABEL_OVERRIDES[featureName]
   return featureName.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}
+
+const formatFeatureConstraintHint = (feature: LiteFeatureMetadata): string | null => {
+  const min = feature.constraints?.min
+  const max = feature.constraints?.max
+  if (min !== undefined && max !== undefined) return `Range: ${min} - ${max}`
+  if (min !== undefined) return `Minimum: ${min}`
+  if (max !== undefined) return `Maximum: ${max}`
+  return null
 }
 
 interface PresetScenario { id: string; title: string; description: string; values: Partial<RawFeaturesFormValues> }
@@ -279,7 +289,12 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
             </div>
             {isLoading ? (
               <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
-                <div className="type-caption mb-3 flex items-center gap-2 font-medium"><Sparkles className="h-3.5 w-3.5" />Preparing minimal feature controls...</div>
+                <StatusBanner
+                  variant="loading"
+                  title="Preparing controls"
+                  message="Preparing minimal feature controls..."
+                  className="mb-3"
+                />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {LITE_FEATURES.map(feature => (<div key={feature.name} className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-11 w-full" /></div>))}
                 </div>
@@ -300,7 +315,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
                             <FormItem>
                               <FormLabel className="readable-label">{formatFeatureLabel(feature.name)}</FormLabel>
                               <FormControl><Input {...field} type={feature.type === 'number' ? 'number' : 'text'} step={feature.type === 'number' ? 'any' : undefined} value={field.value ?? ''} disabled={isLoading} className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]" onChange={e => { if (feature.type === 'number') { const next = e.target.value; field.onChange(next === '' ? 0 : Number(next)); return } field.onChange(e.target.value) }} /></FormControl>
-                              {feature.constraints?.min !== undefined && feature.constraints?.max !== undefined && <FormDescription className="type-caption">Range: {feature.constraints.min} - {feature.constraints.max}</FormDescription>}
+                              {formatFeatureConstraintHint(feature) ? <FormDescription className="type-caption">{formatFeatureConstraintHint(feature)}</FormDescription> : null}
                               <FormMessage />
                             </FormItem>
                           )} />
@@ -327,6 +342,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
             </div>
           </form>
         </Form>
+        {state.errorMessage ? <StatusBanner variant="error" message={state.errorMessage} className="mt-6" /> : null}
         {!prediction && !isLoading && <div className="type-body mt-6 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-center text-sm">Fill the main fields above and run Predict. Remaining model features will be preprocessed automatically.</div>}
         {prediction && (
           <>

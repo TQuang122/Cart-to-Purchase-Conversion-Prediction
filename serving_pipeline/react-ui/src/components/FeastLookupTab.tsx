@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { DatabaseZap, Sparkles } from 'lucide-react'
+import { DatabaseZap } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError } from '@/lib/api'
@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,10 +23,11 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatusBanner } from '@/components/ui/status-banner'
 
 const feastLookupSchema = z.object({
-  user_id: z.string().min(1),
-  product_id: z.string().min(1),
+  user_id: z.string().min(1, 'User ID is required.'),
+  product_id: z.string().min(1, 'Product ID is required.'),
 })
 
 type FeastLookupFormValues = z.infer<typeof feastLookupSchema>
@@ -40,7 +42,7 @@ export const FeastLookupTab = () => {
   const form = useForm<FeastLookupFormValues>({
     resolver: zodResolver(feastLookupSchema),
     defaultValues,
-    mode: 'onBlur',
+    mode: 'onTouched',
   })
   const { apiClient, dispatch, isLoading, state } = useAppContext()
   const [prediction, setPrediction] = useState<CartPrediction | null>(null)
@@ -66,13 +68,16 @@ export const FeastLookupTab = () => {
       setPrediction(response)
       toast.success('Feast lookup prediction completed!')
     } catch (error) {
-      const message =
+      const baseMessage =
         error instanceof ApiClientError
           ? error.message
           : 'Failed to predict with feast lookup input.'
-      if (error instanceof ApiClientError && (error.status === 503 || message.toLowerCase().includes('not available'))) {
-        toast.error('Feast lookup is unavailable on production server. Use Raw Features or Batch CSV instead.')
-      }
+      const isUnavailable =
+        error instanceof ApiClientError &&
+        (error.status === 503 || baseMessage.toLowerCase().includes('not available'))
+      const message = isUnavailable
+        ? 'Feast lookup is unavailable on production server. Use Raw Features or Batch CSV instead.'
+        : baseMessage
       dispatch({ type: 'setError', payload: message })
       toast.error(message)
       setPrediction(null)
@@ -178,10 +183,12 @@ export const FeastLookupTab = () => {
           <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
             {isLoading ? (
               <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
-                <div className="type-caption mb-3 flex items-center gap-2 font-medium">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Loading Feast lookup controls...
-                </div>
+                <StatusBanner
+                  variant="loading"
+                  title="Loading lookup form"
+                  message="Loading Feast lookup controls..."
+                  className="mb-3"
+                />
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-20" />
@@ -210,6 +217,7 @@ export const FeastLookupTab = () => {
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
                       </FormControl>
+                      <FormDescription className="type-caption">Enter a valid Feast entity user ID.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -228,6 +236,7 @@ export const FeastLookupTab = () => {
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
                       </FormControl>
+                      <FormDescription className="type-caption">Enter a valid Feast entity product ID.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -254,11 +263,7 @@ export const FeastLookupTab = () => {
           </form>
         </Form>
 
-        {state.errorMessage ? (
-          <div className="type-body state-surface-error state-text-error rounded-xl border p-3 text-sm">
-            {state.errorMessage}
-          </div>
-        ) : null}
+        {state.errorMessage ? <StatusBanner variant="error" message={state.errorMessage} /> : null}
 
         {!prediction && !isLoading && (
           <div className="type-body mt-2 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-center text-sm">

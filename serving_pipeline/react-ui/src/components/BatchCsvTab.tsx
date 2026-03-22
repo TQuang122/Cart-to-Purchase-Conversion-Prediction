@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
-import { Upload, FileText, X, Download, Files, Sparkles } from 'lucide-react'
+import { Upload, FileText, X, Download, Files } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError, type ExplainLevel } from '@/lib/api'
@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatusBanner } from '@/components/ui/status-banner'
 import { cn } from '@/lib/utils'
 
 // CSV template for batch prediction
@@ -119,6 +120,7 @@ export const BatchCsvTab = () => {
   const [cohortRows, setCohortRows] = useState<CohortMetadataRow[] | null>(null)
   const [simulatorThreshold, setSimulatorThreshold] = useState<number | null>(null)
   const [chartLinkedFilter, setChartLinkedFilter] = useState<ChartLinkedFilter | null>(null)
+  const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null)
 
   const effectiveThresholdFor = useCallback(
     (item: CartPrediction) => simulatorThreshold ?? getDecisionThreshold(item),
@@ -248,8 +250,10 @@ export const BatchCsvTab = () => {
     const files = e.dataTransfer.files
     if (files.length > 0 && files[0].name.endsWith('.csv')) {
       setSelectedFile(files[0])
+      setFileValidationMessage(null)
       toast.info(`File ready: ${files[0].name}`)
     } else {
+      setFileValidationMessage('Please drop a valid CSV file.')
       toast.warning('Please drop a CSV file')
     }
   }, [])
@@ -304,6 +308,7 @@ export const BatchCsvTab = () => {
 
   const onUpload = useCallback(async () => {
     if (!selectedFile) {
+      setFileValidationMessage('Please choose a CSV file first.')
       toast.warning('Please choose a CSV file first.')
       return
     }
@@ -327,6 +332,7 @@ export const BatchCsvTab = () => {
       setUploadProgress(100)
       setProcessingStage('Batch inference completed.')
       setEtaSeconds(0)
+      setFileValidationMessage(null)
       setResults(response)
       setCohortRows(parsedCohortRows)
       setChartLinkedFilter(null)
@@ -350,6 +356,7 @@ export const BatchCsvTab = () => {
     setEstimatedRows(null)
     setCohortRows(null)
     setChartLinkedFilter(null)
+    setFileValidationMessage(null)
   }
 
   const downloadTemplate = () => {
@@ -380,10 +387,12 @@ export const BatchCsvTab = () => {
       <CardContent className="space-y-6 pt-7 sm:space-y-7 sm:pt-8">
         {isLoading ? (
           <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
-            <div className="type-caption mb-3 flex items-center gap-2 font-medium">
-              <Sparkles className="h-3.5 w-3.5" />
-              {processingStage || 'Processing CSV batch...'}
-            </div>
+            <StatusBanner
+              variant="loading"
+              title="Processing batch upload"
+              message={processingStage || 'Processing CSV batch...'}
+              className="mb-3"
+            />
             <div className="mb-3 space-y-1.5">
               <div className="type-caption flex items-center justify-between">
                 <span>{estimatedRows ? `${estimatedRows} rows` : 'Estimating rows...'}</span>
@@ -456,12 +465,17 @@ export const BatchCsvTab = () => {
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
-                      if (file) {
-                        setSelectedFile(file)
-                        toast.info(`File ready: ${file.name}`)
-                      }
-                    }}
-                  />
+                        if (file) {
+                          setSelectedFile(file)
+                          setFileValidationMessage(null)
+                          toast.info(`File ready: ${file.name}`)
+                        } else {
+                          setFileValidationMessage('Please choose a valid CSV file.')
+                        }
+                      }}
+                      aria-invalid={fileValidationMessage ? 'true' : 'false'}
+                      aria-describedby="batch-upload-feedback"
+                    />
                   <Button variant="outline" size="sm" asChild>
                     <span>Browse Files</span>
                   </Button>
@@ -479,6 +493,14 @@ export const BatchCsvTab = () => {
             )}
           </div>
         )}
+
+        {fileValidationMessage ? (
+          <StatusBanner
+            variant="error"
+            message={fileValidationMessage}
+            className="mt-2"
+          />
+        ) : null}
 
         <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/60 bg-card/90 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6" role="region" aria-label="Batch prediction actions">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -516,11 +538,9 @@ export const BatchCsvTab = () => {
           </div>
         </div>
 
-        {state.errorMessage ? (
-          <div className="type-body state-surface-error state-text-error rounded-xl border p-3 text-sm">
-            {state.errorMessage}
-          </div>
-        ) : null}
+        <div id="batch-upload-feedback">
+          {state.errorMessage ? <StatusBanner variant="error" message={state.errorMessage} /> : null}
+        </div>
 
         {!isLoading && results.length === 0 && !state.errorMessage && (
           <div className="type-body mt-2 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-center text-sm">
