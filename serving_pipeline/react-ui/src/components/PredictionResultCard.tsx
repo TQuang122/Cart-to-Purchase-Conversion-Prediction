@@ -2,8 +2,26 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, RotateCcw, Sparkles, Wand2, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { CodeBlock } from '@/components/ui/code-block'
+import { Magnetic } from '@/components/ui/magnetic'
 import { cn } from '@/lib/utils'
 import type { CartPrediction } from '@/types/api'
+
+function buildResultSnapshot(pred: CartPrediction): string {
+  return JSON.stringify(
+    {
+      is_purchased: pred.is_purchased,
+      probability: pred.probability,
+      decision_threshold: pred.decision_threshold,
+      model_used: pred.model_used,
+      feature_quality: pred.feature_quality,
+      feature_contributions: pred.feature_contributions,
+      explainability: pred.explainability,
+    },
+    null,
+    2,
+  )
+}
 
 interface PredictionResultCardProps {
   prediction: CartPrediction
@@ -348,11 +366,28 @@ export const PredictionResultCard = ({
             ) : null}
 
             {onTryPreset ? (
-              <Button onClick={onTryPreset} className="h-9 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
-                <Wand2 className="mr-1.5 h-4 w-4" />
-                Try Preset
-              </Button>
+              <Magnetic intensity={0.5} range={60}>
+                <Button onClick={onTryPreset} className="h-9 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
+                  <Wand2 className="mr-1.5 h-4 w-4" />
+                  Try Preset
+                </Button>
+              </Magnetic>
             ) : null}
+          </div>
+
+          <div className="mt-4 border-t border-border/55 pt-3">
+            <CodeBlock
+              code={buildResultSnapshot(prediction)}
+              language="json"
+              title="Raw JSON Response"
+              variant="minimal"
+              animation="fadeIn"
+              animationDelay={0.2}
+              collapsible
+              defaultCollapsed
+              maxHeight="280px"
+              showLineNumbers={false}
+            />
           </div>
         </div>
       </div>

@@ -10,6 +10,10 @@ import { MeshGradient } from '@/components/MeshGradient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CommandPalette, type CommandGroup } from '@/components/ui/command-palette'
 import { TypewriterText } from '@/components/ui/typewritter-text'
+import { FeedbackWidget } from '@/components/ui/feedback-widget'
+import { Magnetic } from '@/components/ui/magnetic'
+import { RainbowButton } from '@/components/ui/rainbow-button'
+import { ScrollText } from '@/components/ui/scroll-text'
 import { useAppContext } from '@/contexts/AppContext'
 
 type TabValue = 'raw' | 'batch' | 'feast'
@@ -208,12 +212,13 @@ function App() {
                   />
                 </h1>
                 <div className="flex items-center gap-2">
-                  <Link
-                    to="/dataset"
-                    className="inline-flex items-center rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-semibold text-text-primary transition-colors hover:border-[hsl(var(--interactive)/0.48)]"
-                  >
-                    Dataset Explorer
-                  </Link>
+                  <Magnetic intensity={0.4} range={80}>
+                    <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
+                      <Link to="/dataset" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        Dataset Explorer
+                      </Link>
+                    </RainbowButton>
+                  </Magnetic>
                   <button type="button" onClick={() => setIsCommandPaletteOpen(true)} className="hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
                     <Command className="h-4 w-4" />
                     <span>⌘K</span>
@@ -228,7 +233,7 @@ function App() {
             </section>
             <section className="mt-6 dashboard-shell dashboard-card-scale-md animate-slide-up p-3 sm:p-4" style={{ animationDelay: '180ms' }}>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg"><Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" /><span>Prediction studio</span></h2>
+                <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg"><Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" /><ScrollText effect="fadeUp"><span>Prediction studio</span></ScrollText></h2>
                 <p className="tone-chip type-kicker px-2.5 py-1">Action-first</p>
               </div>
               <div className="state-banner state-banner-ready mb-4" role="status">
@@ -275,6 +280,9 @@ function App() {
               <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <p className="type-body text-sm">Cart-to-Purchase Prediction System</p>
                 <div className="type-caption flex items-center gap-4 text-text-secondary"><span className="flex items-center gap-1"><span className="state-fill-success h-1.5 w-1.5 rounded-full animate-pulse" />Operational</span><span>v1.1.0</span></div>
+              </div>
+              <div className="mt-4">
+                <FeedbackWidget label="Was this prediction helpful?" placeholder="Share your feedback about the prediction result..." />
               </div>
             </footer>
           </div>
