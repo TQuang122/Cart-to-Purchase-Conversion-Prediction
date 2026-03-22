@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { apiClient } from '@/lib/api'
+import { apiClient, resolveApiRoot } from '@/lib/api'
 import type { ServingModel } from '@/types/api'
 
 interface AppState {
@@ -34,7 +34,7 @@ interface AppContextValue {
   isLoading: boolean
 }
 
-const DEFAULT_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
+const DEFAULT_API_BASE_URL = resolveApiRoot()
 
 const initialState: AppState = {
   apiBaseUrl: DEFAULT_API_BASE_URL,

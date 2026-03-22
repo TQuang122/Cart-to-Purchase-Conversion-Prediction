@@ -11,14 +11,37 @@ import type {
 
 export type ExplainLevel = 'top' | 'full'
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:8000/predict'
+const LOCAL_API_ROOT = 'http://127.0.0.1:8000'
+
+const resolveDefaultApiRoot = (): string => {
+  const envBase = import.meta.env.VITE_API_BASE_URL?.trim()
+  if (envBase) return envBase.replace(/\/$/, '').replace(/\/predict\/?$/, '')
+
+  if (typeof window === 'undefined') return LOCAL_API_ROOT
+
+  const { hostname, origin } = window.location
+  const isLocalHost =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.local')
+
+  if (isLocalHost) return LOCAL_API_ROOT
+
+  if (import.meta.env.PROD) {
+    console.warn(
+      '[api] VITE_API_BASE_URL is not set in production; falling back to same-origin API root.'
+    )
+  }
+
+  return origin
+}
 
 /**
  * Resolves the API root URL (base URL without /predict suffix).
  * Used by components that call non-standard endpoints (e.g. /dataset/*, /model/*, /chat/*).
  */
 export const resolveApiRoot = (base?: string): string => {
-  const url = base ?? import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+  const url = base ?? resolveDefaultApiRoot()
   return url.replace(/\/predict\/?$/, '')
 }
 
@@ -33,12 +56,8 @@ export class ApiClientError extends Error {
 }
 
 const resolveBaseUrl = (): string => {
-  const envBase = import.meta.env.VITE_API_BASE_URL
-  if (!envBase) {
-    return DEFAULT_BASE_URL
-  }
-  const normalized = envBase.replace(/\/$/, '') || DEFAULT_BASE_URL
-  return normalized.endsWith('/predict') ? normalized : `${normalized}/predict`
+  const apiRoot = resolveApiRoot()
+  return `${apiRoot}/predict`
 }
 
 const API_BASE_URL = resolveBaseUrl()

@@ -62,7 +62,7 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ 
-  apiBaseUrl = 'http://127.0.0.1:8000',
+  apiBaseUrl = resolveApiRoot(),
   onStatsUpdate,
   onOpenIntro,
   layout = 'full',
