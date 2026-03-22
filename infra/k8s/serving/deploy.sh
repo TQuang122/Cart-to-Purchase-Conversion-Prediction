@@ -1,32 +1,24 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Deploy Cart-to-Purchase Serving API to KinD cluster
-# Usage: ./infra/k8s/serving/deploy.sh [build|deploy|status|logs|down]
 # =============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-IMAGE_NAME="ctpserving"
-IMAGE_TAG="latest"
+SERVING_IMAGE="${SERVING_IMAGE:-tquang71/ctpserving:1.0.0}"
+KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-ctp-cluster}"
 NAMESPACE="mlops"
 
 cd "$PROJECT_ROOT"
 
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
 
-build() {
-    log "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
-    docker build \
-        -t "$IMAGE_NAME:$IMAGE_TAG" \
-        -f Dockerfile.serving \
-        . --no-cache
-    log "Build complete"
-}
-
 load() {
-    log "Loading image into KinD cluster"
-    kind load docker-image "$IMAGE_NAME:$IMAGE_TAG" --name ctp-cluster
+    log "Pulling pinned registry image: $SERVING_IMAGE"
+    docker pull "$SERVING_IMAGE"
+    log "Loading image into KinD cluster: $KIND_CLUSTER_NAME"
+    kind load docker-image "$SERVING_IMAGE" --name "$KIND_CLUSTER_NAME"
     log "Image loaded into KinD"
 }
 
@@ -38,6 +30,9 @@ deploy() {
     kubectl apply -f infra/k8s/serving/serving-deployment.yaml
     kubectl apply -f infra/k8s/serving/serving-service.yaml
     kubectl apply -f infra/k8s/serving/serving-hpa.yaml
+    kubectl set image -n "$NAMESPACE" deployment/serving-api \
+      download-model="$SERVING_IMAGE" \
+      serving-api="$SERVING_IMAGE"
     log "Deployment applied"
 }
 
@@ -76,7 +71,6 @@ down() {
 
 CMD="${1:-help}"
 case "$CMD" in
-    build)  build ;;
     load)   load ;;
     deploy) deploy ;;
     status) status ;;
@@ -85,27 +79,28 @@ case "$CMD" in
     port-forward) port_forward ;;
     down)   down ;;
     all)
-        build && load && deploy
+        load && deploy
         echo ""
         status
         echo ""
         echo "========================================"
         echo "  Serving API deployed!"
+        echo "  Image: $SERVING_IMAGE"
         echo "  Access: kubectl port-forward -n mlops svc/serving-api 8000:8000"
         echo "  Then: curl http://localhost:8000/health"
         echo "========================================"
         ;;
     *)
-        echo "Usage: $0 {build|load|deploy|status|logs|watch|port-forward|down|all}"
+        echo "Usage: $0 {load|deploy|status|logs|watch|port-forward|down|all}"
         echo ""
-        echo "  build      - Build Docker image"
-        echo "  load       - Load image into KinD cluster"
+        echo "  SERVING_IMAGE default: tquang71/ctpserving:1.0.0"
+        echo "  load       - Pull pinned registry image and load into KinD"
         echo "  deploy     - Deploy to K8s"
         echo "  status     - Check pod/svc status"
         echo "  logs       - Tail logs"
         echo "  watch      - Watch pod status"
         echo "  port-forward - Port-forward to localhost:8000"
         echo "  down       - Remove all serving resources"
-        echo "  all        - Build + load + deploy"
+        echo "  all        - Load + deploy"
         ;;
 esac

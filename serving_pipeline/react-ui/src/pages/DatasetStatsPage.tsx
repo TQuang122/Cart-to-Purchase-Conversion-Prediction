@@ -28,6 +28,7 @@ import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
 import { ScrollText } from '@/components/ui/scroll-text'
+import { useAppContext } from '@/contexts/AppContext'
 import { cn } from '@/lib/utils'
 import type {
   DatasetConversionResponse,
@@ -254,7 +255,8 @@ function HorizontalBarChartCard({
 export function DatasetStatsPage() {
   const [searchParams] = useSearchParams()
   const apiRoot = resolveApiRoot(searchParams.get('api') ?? undefined)
-  const selectedModel = 'xgboost'
+  const { state } = useAppContext()
+  const selectedModel = state.selectedModel
 
   const [profile, setProfile] = useState<DatasetProfileResponse | null>(null)
   const [quality, setQuality] = useState<DatasetQualityResponse | null>(null)
