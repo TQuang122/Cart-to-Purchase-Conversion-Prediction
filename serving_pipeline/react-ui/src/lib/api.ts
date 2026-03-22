@@ -12,6 +12,15 @@ export type ExplainLevel = 'top' | 'full'
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8000/predict'
 
+/**
+ * Resolves the API root URL (base URL without /predict suffix).
+ * Used by components that call non-standard endpoints (e.g. /dataset/*, /model/*, /chat/*).
+ */
+export const resolveApiRoot = (base?: string): string => {
+  const url = base ?? import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+  return url.replace(/\/predict\/?$/, '')
+}
+
 export class ApiClientError extends Error {
   public readonly status: number
 
