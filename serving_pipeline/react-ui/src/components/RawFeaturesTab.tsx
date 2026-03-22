@@ -273,20 +273,20 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
       <CardContent className="pt-7 sm:pt-8">
         <Form {...form}>
           <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <div className="panel-accent rounded-xl border border-border/60 bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="type-heading text-sm font-semibold text-foreground">Preset scenarios</p>
                   <p className="readable-helper">{showPresets ? 'Auto-fill the minimal form with realistic sample patterns.' : 'Enable to auto-fill with preset patterns.'}</p>
                 </div>
-                <button type="button" onClick={() => setShowPresets(!showPresets)} className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${showPresets ? 'state-badge-success' : 'border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                <button type="button" onClick={() => setShowPresets(!showPresets)} className={`micro-interactive rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${showPresets ? 'state-badge-success' : 'border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
                   {showPresets ? 'Hide' : 'Show'}
                 </button>
               </div>
               {showPresets && (
                 <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                   {PRESET_SCENARIOS.map(preset => (
-                    <button key={preset.id} type="button" onClick={() => applyPreset(preset)} className="rounded-lg border border-border/60 bg-background/60 p-3 text-left transition-colors hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]">
+                    <button key={preset.id} type="button" onClick={() => applyPreset(preset)} className="micro-interactive rounded-lg border border-border/60 bg-background/60 p-3 text-left transition-colors hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]">
                       <p className="type-heading text-sm font-semibold text-foreground">{preset.title}</p>
                       <p className="type-caption mt-1">{preset.description}</p>
                     </button>
@@ -333,7 +333,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
                 )
               })
             )}
-            <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-border/60 bg-card/90 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6" role="region" aria-label="Raw features actions">
+            <div className="panel-accent sticky bottom-0 z-10 -mx-4 mt-6 border-t border-border/60 bg-card/90 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6" role="region" aria-label="Raw features actions">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="type-heading text-sm font-semibold">Ready to run prediction</p>
@@ -342,8 +342,8 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button type="button" variant="outline" onClick={clearDraft} className="h-11 border-border/70 bg-background/50">Clear Draft</Button>
-                  <Button type="submit" disabled={isLoading} className="h-11 min-w-32 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">{isLoading ? 'Predicting...' : 'Predict'}</Button>
+                  <Button type="button" variant="outline" onClick={clearDraft} className="micro-interactive h-11 border-border/70 bg-background/50">Clear Draft</Button>
+                  <Button type="submit" disabled={isLoading} className="micro-interactive h-11 min-w-32 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">{isLoading ? 'Predicting...' : 'Predict'}</Button>
                 </div>
               </div>
             </div>

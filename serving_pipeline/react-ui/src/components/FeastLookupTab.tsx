@@ -189,7 +189,7 @@ export const FeastLookupTab = () => {
         <Form {...form}>
           <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
             {isLoading ? (
-              <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
+              <div className="section-reveal section-delay-2 panel-accent rounded-xl border border-border/60 bg-muted/25 p-4">
                 <StatusBanner
                   variant="loading"
                   title="Loading lookup form"
@@ -198,14 +198,14 @@ export const FeastLookupTab = () => {
                 />
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-11 w-full" />
+                    <Skeleton className="skeleton-shimmer h-4 w-20" />
+                    <Skeleton className="skeleton-shimmer h-11 w-full" />
                   </div>
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-11 w-full" />
+                    <Skeleton className="skeleton-shimmer h-4 w-24" />
+                    <Skeleton className="skeleton-shimmer h-11 w-full" />
                   </div>
-                  <Skeleton className="h-11 w-40" />
+                  <Skeleton className="skeleton-shimmer h-11 w-40" />
                 </div>
               </div>
             ) : (

@@ -206,14 +206,14 @@ function App() {
           />
         <main id="main-content" tabIndex={-1} className="relative min-h-screen">
           <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
-            <section className="dashboard-shell dashboard-card-scale-lg px-3 py-3 sm:px-4">
+            <section className="dashboard-shell dashboard-card-scale-lg section-reveal section-delay-1 panel-accent px-3 py-3 sm:px-4">
               <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
                 <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
                   <NeuralCartMark variant="halo" />
-                  <span>Cart-to-Purchase</span>
+                  <span className="hero-reveal">Cart-to-Purchase</span>
                   <MorphingText
                     words={['Workspace', 'Studio', 'Dashboard', 'Predictor']} 
-                    className="text-[hsl(var(--interactive))]"
+                    className="hero-gradient-text hero-reveal"
                     interval={2000}
                     animationDuration={0.45}
                   />
@@ -226,19 +226,23 @@ function App() {
                       </Link>
                     </RainbowButton>
                   </Magnetic>
-                  <button type="button" onClick={() => setIsCommandPaletteOpen(true)} className="hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
-                    <Command className="h-4 w-4" />
-                    <span>⌘K</span>
-                  </button>
-                  <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
-                    {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-                    <span>{isSideRailOpen ? 'Hide' : 'Open'} rail</span>
-                  </button>
+                  <Magnetic intensity={0.12} range={46}>
+                    <button type="button" onClick={() => setIsCommandPaletteOpen(true)} className="micro-interactive hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
+                      <Command className="h-4 w-4" />
+                      <span>⌘K</span>
+                    </button>
+                  </Magnetic>
+                  <Magnetic intensity={0.12} range={46}>
+                    <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="micro-interactive inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
+                      {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+                      <span>{isSideRailOpen ? 'Hide' : 'Open'} rail</span>
+                    </button>
+                  </Magnetic>
                 </div>
               </div>
               <DashboardHeader apiBaseUrl={state.apiBaseUrl} layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
             </section>
-            <section className="mt-6 dashboard-shell dashboard-card-scale-md animate-slide-up p-3 sm:p-4" style={{ animationDelay: '180ms' }}>
+            <section className="mt-6 dashboard-shell dashboard-card-scale-md section-reveal section-delay-3 panel-accent p-3 sm:p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg">
                   <Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" />

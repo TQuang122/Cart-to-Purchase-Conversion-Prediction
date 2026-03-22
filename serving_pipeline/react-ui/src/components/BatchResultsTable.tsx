@@ -15,6 +15,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Magnetic } from '@/components/ui/magnetic'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   HIGH_CONFIDENCE_MARGIN,
@@ -366,7 +367,7 @@ export const BatchResultsTable = ({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
+      <div className="section-reveal section-delay-2 panel-accent rounded-xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -382,30 +383,34 @@ export const BatchResultsTable = ({
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={sendAnalyzeCurrentFilteredView}
-              className="h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
-              disabled={sortedFilteredRows.length === 0}
-            >
-              Analyze current view
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportFilteredCsv}
-              className="h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
-              disabled={sortedFilteredRows.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export filtered
-            </Button>
+            <Magnetic intensity={0.14} range={56}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={sendAnalyzeCurrentFilteredView}
+                className="micro-interactive h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
+                disabled={sortedFilteredRows.length === 0}
+              >
+                Analyze current view
+              </Button>
+            </Magnetic>
+            <Magnetic intensity={0.14} range={56}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportFilteredCsv}
+                className="micro-interactive h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
+                disabled={sortedFilteredRows.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export filtered
+              </Button>
+            </Magnetic>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters((prev) => !prev)}
-              className="h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
+              className="micro-interactive h-11 border-border/70 px-4 transition-[border-color,background-color] duration-200 hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
             >
               <ArrowUpDown className="mr-2 h-4 w-4" />
               {showFilters ? 'Hide' : 'Show'} Filters
@@ -441,50 +446,58 @@ export const BatchResultsTable = ({
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
+            <Magnetic intensity={0.08} range={36}>
             <button
               type="button"
               onClick={() => {
                 setResultFilter('all')
                 table.setPageIndex(0)
               }}
-              className={cn('type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'all' ? 'state-badge-info' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('micro-interactive type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'all' ? 'state-badge-info' : 'text-muted-foreground hover:text-foreground')}
               aria-pressed={resultFilter === 'all'}
             >
               All
             </button>
+            </Magnetic>
+            <Magnetic intensity={0.08} range={36}>
             <button
               type="button"
               onClick={() => {
                 setResultFilter('purchased')
                 table.setPageIndex(0)
               }}
-              className={cn('type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'purchased' ? 'state-badge-success' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('micro-interactive type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'purchased' ? 'state-badge-success' : 'text-muted-foreground hover:text-foreground')}
               aria-pressed={resultFilter === 'purchased'}
             >
               Purchased only
             </button>
+            </Magnetic>
+            <Magnetic intensity={0.08} range={36}>
             <button
               type="button"
               onClick={() => {
                 setResultFilter('not_purchased')
                 table.setPageIndex(0)
               }}
-              className={cn('type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'not_purchased' ? 'state-badge-error' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('micro-interactive type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'not_purchased' ? 'state-badge-error' : 'text-muted-foreground hover:text-foreground')}
               aria-pressed={resultFilter === 'not_purchased'}
             >
               Not purchased only
             </button>
+            </Magnetic>
+            <Magnetic intensity={0.08} range={36}>
             <button
               type="button"
               onClick={() => {
                 setResultFilter('high_confidence')
                 table.setPageIndex(0)
               }}
-              className={cn('type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'high_confidence' ? 'state-badge-warning' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('micro-interactive type-caption rounded-md px-2.5 py-1.5 font-medium transition-colors', resultFilter === 'high_confidence' ? 'state-badge-warning' : 'text-muted-foreground hover:text-foreground')}
               aria-pressed={resultFilter === 'high_confidence'}
             >
               High confidence (&ge; 15 pts from threshold)
             </button>
+            </Magnetic>
           </div>
 
           <div className="mt-3 rounded-lg border border-border/60 bg-background/40 p-3">
@@ -513,7 +526,7 @@ export const BatchResultsTable = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="micro-interactive h-7 px-2 text-xs"
                 onClick={() => onSimulatorThresholdChange(null)}
                 disabled={simulatorThreshold === null}
               >
@@ -527,7 +540,7 @@ export const BatchResultsTable = ({
               <span className="type-caption text-xs text-foreground/90">
                 Chart filter active: {externalFilterLabel ?? `${externalRowIndexes?.length ?? 0} rows`}
               </span>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClearExternalFilter}>
+              <Button variant="ghost" size="sm" className="micro-interactive h-7 px-2 text-xs" onClick={onClearExternalFilter}>
                 Clear chart filter
               </Button>
             </div>
@@ -591,7 +604,7 @@ export const BatchResultsTable = ({
                       setMaxProbability('')
                       table.setPageIndex(0)
                     }}
-                    className="h-9"
+                    className="micro-interactive h-9"
                   >
                     Clear
                   </Button>
@@ -641,19 +654,19 @@ export const BatchResultsTable = ({
               ))}
             </select>
           </label>
-          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => table.firstPage()} disabled={!table.getCanPreviousPage()}>
+          <Button variant="outline" size="sm" className="micro-interactive h-8 px-2" onClick={() => table.firstPage()} disabled={!table.getCanPreviousPage()}>
             First
           </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+          <Button variant="outline" size="sm" className="micro-interactive h-8 px-2" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
             Prev
           </Button>
           <span className="type-caption text-xs text-muted-foreground">
             Page {pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}
           </span>
-          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+          <Button variant="outline" size="sm" className="micro-interactive h-8 px-2" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
             Next
           </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => table.lastPage()} disabled={!table.getCanNextPage()}>
+          <Button variant="outline" size="sm" className="micro-interactive h-8 px-2" onClick={() => table.lastPage()} disabled={!table.getCanNextPage()}>
             Last
           </Button>
         </div>

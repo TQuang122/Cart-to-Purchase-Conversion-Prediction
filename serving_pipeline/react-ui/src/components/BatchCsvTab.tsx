@@ -14,6 +14,8 @@ import {
 } from '@/lib/predictionConfidence'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Magnetic } from '@/components/ui/magnetic'
+import { ScrollText } from '@/components/ui/scroll-text'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBanner } from '@/components/ui/status-banner'
 import { cn } from '@/lib/utils'
@@ -386,14 +388,14 @@ export const BatchCsvTab = () => {
           <Files className="h-4 w-4" />
           <span className="type-kicker">Bulk Inference</span>
         </div>
-        <CardTitle className="readable-title text-xl sm:text-[1.36rem]">Batch CSV Prediction</CardTitle>
+        <CardTitle className="readable-title text-xl sm:text-[1.36rem]"><ScrollText effect="fadeIn">Batch CSV Prediction</ScrollText></CardTitle>
         <CardDescription className="readable-description">
           Upload a CSV with core columns.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-7 sm:space-y-7 sm:pt-8">
         {isLoading ? (
-          <div className="rounded-xl border border-border/60 bg-muted/25 p-4">
+          <div className="section-reveal section-delay-1 panel-accent rounded-xl border border-border/60 bg-muted/25 p-4">
             <StatusBanner
               variant="loading"
               title="Processing batch upload"
@@ -416,14 +418,14 @@ export const BatchCsvTab = () => {
               </div>
             </div>
             <div className="space-y-4">
-              <Skeleton className="h-36 w-full" />
-              <Skeleton className="h-11 w-44" />
+              <Skeleton className="skeleton-shimmer h-36 w-full" />
+              <Skeleton className="skeleton-shimmer h-11 w-44" />
             </div>
           </div>
         ) : (
           <div
             className={cn(
-              'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors',
+              'section-reveal section-delay-2 relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors',
               isDragging
                 ? 'border-primary bg-primary/5'
                 : 'border-border hover:border-primary/50',
@@ -444,15 +446,17 @@ export const BatchCsvTab = () => {
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFile}
-                  className="mt-2"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Remove
-                </Button>
+                <Magnetic intensity={0.12} range={48}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFile}
+                    className="micro-interactive mt-2"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove
+                  </Button>
+                </Magnetic>
               </div>
             ) : (
               <>
@@ -491,7 +495,7 @@ export const BatchCsvTab = () => {
                   variant="ghost"
                   size="sm"
                   onClick={downloadTemplate}
-                  className="mt-2 text-muted-foreground"
+                  className="micro-interactive mt-2 text-muted-foreground"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
@@ -517,16 +521,16 @@ export const BatchCsvTab = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="inline-flex h-10 items-center rounded-md border border-border/70 bg-background/65 p-0.5">
-                {([
-                  { value: 'top', label: 'Explain Top' },
-                  { value: 'full', label: 'Explain Full' },
-                ] as const).map((option) => (
+                  {([
+                    { value: 'top', label: 'Explain Top' },
+                    { value: 'full', label: 'Explain Full' },
+                  ] as const).map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => setSelectedExplainLevel(option.value)}
                     className={cn(
-                      'type-caption rounded px-2.5 py-1.5 text-xs font-medium transition-colors',
+                      'micro-interactive type-caption rounded px-2.5 py-1.5 text-xs font-medium transition-colors',
                       selectedExplainLevel === option.value
                         ? 'state-badge-info text-foreground'
                         : 'text-muted-foreground hover:text-foreground'
@@ -538,9 +542,11 @@ export const BatchCsvTab = () => {
                   </button>
                 ))}
               </div>
-              <Button onClick={onUpload} disabled={!selectedFile || isLoading} className="h-11 min-w-40 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
-                {isLoading ? 'Uploading...' : 'Upload and Predict'}
-              </Button>
+              <Magnetic intensity={0.18} range={60}>
+                <Button onClick={onUpload} disabled={!selectedFile || isLoading} className="micro-interactive h-11 min-w-40 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
+                  {isLoading ? 'Uploading...' : 'Upload and Predict'}
+                </Button>
+              </Magnetic>
             </div>
           </div>
         </div>
@@ -556,7 +562,7 @@ export const BatchCsvTab = () => {
         )}
 
         {results.length > 0 ? (
-          <div ref={resultsSectionRef} className="space-y-4">
+          <div ref={resultsSectionRef} className="section-reveal section-delay-3 space-y-4">
             <div aria-live="polite" aria-atomic="false" className="grid grid-cols-1 gap-3 md:grid-cols-5">
               {[
                 {
@@ -600,7 +606,7 @@ export const BatchCsvTab = () => {
                   helper: `At least ${Math.round(HIGH_CONFIDENCE_MARGIN * 100)} pts from threshold`,
                 },
               ].map((card) => (
-                <div key={card.key} className={cn('flex min-h-[176px] flex-col', card.cardClass)}>
+                <div key={card.key} className={cn('panel-accent flex min-h-[176px] flex-col', card.cardClass)}>
                   <p className="type-body min-h-[5rem] text-sm font-medium text-muted-foreground">{card.label}</p>
                   <p className={card.valueClass}>{card.value}</p>
                   <p className={cn('type-caption mt-auto min-h-[2.5rem]', !card.helper && 'invisible')}>
@@ -611,7 +617,7 @@ export const BatchCsvTab = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-              <div className="rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-1">
+              <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-1">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="type-kicker">Decision console</p>
                   <span className="type-caption inline-flex rounded-full px-2 py-0.5 font-semibold state-badge-info">
@@ -633,8 +639,8 @@ export const BatchCsvTab = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-2">
-                <p className="type-kicker mb-2">Action segmentation</p>
+              <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-2">
+                <p className="type-kicker mb-2"><ScrollText effect="fadeIn">Action segmentation</ScrollText></p>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                   {[
                     { key: 'likely_to_drop', label: 'Likely to drop', rows: actionSegments.likelyToDrop, tone: 'state-text-error' },
@@ -645,22 +651,24 @@ export const BatchCsvTab = () => {
                     <div key={segment.key} className="flex h-full flex-col rounded-lg border border-border/70 bg-background/45 p-3">
                       <p className="type-caption min-h-[4.5rem] text-muted-foreground">{segment.label}</p>
                       <p className={cn('type-metric mt-1 text-lg font-semibold', segment.tone)}>{segment.rows.length}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-auto h-8 w-full border-border/70 px-2.5"
-                        onClick={() => exportSegmentCsv(segment.key, segment.rows)}
-                        disabled={segment.rows.length === 0}
-                      >
-                        Export
-                      </Button>
+                      <Magnetic intensity={0.1} range={44}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="micro-interactive mt-auto h-8 w-full border-border/70 px-2.5"
+                          onClick={() => exportSegmentCsv(segment.key, segment.rows)}
+                          disabled={segment.rows.length === 0}
+                        >
+                          Export
+                        </Button>
+                      </Magnetic>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
+            <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
               <p className="type-kicker mb-2">Batch insight</p>
               <p className="type-body text-sm text-text-primary">
                 This batch predicts <span className="type-metric font-semibold state-text-success">{summary.purchased}</span> likely purchases out of{' '}
@@ -671,11 +679,11 @@ export const BatchCsvTab = () => {
 
             <Suspense
               fallback={
-                <div className="space-y-3 rounded-xl border border-border/70 bg-card/45 p-3.5">
-                  <Skeleton className="h-5 w-52" />
+                <div className="panel-accent space-y-3 rounded-xl border border-border/70 bg-card/45 p-3.5">
+                  <Skeleton className="skeleton-shimmer h-5 w-52" />
                   <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="skeleton-shimmer h-64 w-full" />
+                    <Skeleton className="skeleton-shimmer h-64 w-full" />
                   </div>
                 </div>
               }
@@ -689,7 +697,7 @@ export const BatchCsvTab = () => {
           </Suspense>
 
             {previousSummary ? (
-              <div className="rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
+              <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
                 <p className="type-kicker mb-2">Compare with previous batch</p>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div>
@@ -717,7 +725,7 @@ export const BatchCsvTab = () => {
               </div>
             ) : null}
 
-            <div className="rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
+            <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="type-kicker">Batch results table</p>
                 <span className="type-caption text-muted-foreground">Use threshold simulator to drive all sections</span>

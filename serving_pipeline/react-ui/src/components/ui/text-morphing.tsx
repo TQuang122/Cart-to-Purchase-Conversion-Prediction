@@ -22,7 +22,7 @@ const MorphingText = React.forwardRef<HTMLSpanElement, MorphingTextProps>(
     }, [words.length, interval]);
 
     return (
-      <span ref={ref} className={cn("relative inline-block", className)}>
+      <span ref={ref} className="relative inline-block">
         <AnimatePresence mode="wait">
           <motion.span
             key={currentIndex}
@@ -30,7 +30,7 @@ const MorphingText = React.forwardRef<HTMLSpanElement, MorphingTextProps>(
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -20, filter: "blur(8px)" }}
             transition={{ duration: animationDuration, ease: "easeInOut" }}
-            className="inline-block"
+            className={cn("inline-block", className)}
           >
             {words[currentIndex]}
           </motion.span>

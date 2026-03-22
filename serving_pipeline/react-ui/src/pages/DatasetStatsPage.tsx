@@ -27,6 +27,7 @@ import { resolveApiRoot } from '@/lib/api'
 import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
+import { ScrollText } from '@/components/ui/scroll-text'
 import { cn } from '@/lib/utils'
 import type {
   DatasetConversionResponse,
@@ -115,7 +116,7 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
     : 0
 
   return (
-    <Card className="dashboard-card">
+      <Card className="dashboard-card panel-accent">
       <CardHeader className="pb-2">
         <CardTitle className="type-heading text-base">Price Distribution</CardTitle>
         <CardDescription>Price histogram (8 bins)</CardDescription>
@@ -191,7 +192,7 @@ function HorizontalBarChartCard({
   layout?: 'vertical' | 'horizontal'
 }) {
   return (
-    <Card className="dashboard-card">
+          <Card className="dashboard-card panel-accent">
       <CardHeader className="pb-2">
         <CardTitle className="type-heading text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -478,7 +479,7 @@ export function DatasetStatsPage() {
           </div>
         </header>
         <main className="mx-auto flex max-w-7xl items-center justify-center px-4 py-20">
-          <Card className="dashboard-card max-w-md">
+        <Card className="dashboard-card panel-accent max-w-md">
             <CardContent className="pt-6">
               <div className="state-banner state-banner-error">
                 <div className="h-5 w-5 text-[hsl(var(--error))]">⚠</div>
@@ -515,8 +516,8 @@ export function DatasetStatsPage() {
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Overview KPIs - Power BI Style */}
-        <section className="mb-6">
-          <h2 className="type-heading mb-4 text-lg">Overview</h2>
+        <section className="section-reveal section-delay-1 mb-6">
+          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Overview</ScrollText></h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <MetricTile
               label="Total Rows"
@@ -571,10 +572,10 @@ export function DatasetStatsPage() {
           </div>
         </section>
 
-        <section className="mb-6">
-          <h2 className="type-heading mb-4 text-lg">Conversion Behavior</h2>
+        <section className="section-reveal section-delay-2 mb-6">
+          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Conversion Behavior</ScrollText></h2>
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="dashboard-card lg:col-span-2">
+            <Card className="dashboard-card panel-accent lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Hourly Purchase Probability</CardTitle>
                 <CardDescription>Conversion rate by hour (15h - 23h)</CardDescription>
@@ -615,7 +616,7 @@ export function DatasetStatsPage() {
               </CardContent>
             </Card>
 
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Cart Events by Day of Week</CardTitle>
                 <CardDescription>Volume by weekday</CardDescription>
@@ -638,7 +639,7 @@ export function DatasetStatsPage() {
             </Card>
           </div>
 
-          <Card className="dashboard-card mt-4">
+          <Card className="dashboard-card panel-accent mt-4">
             <CardHeader className="pb-2">
               <CardTitle className="type-heading text-base">Time to Make a Purchase Decision (first 60 minutes)</CardTitle>
               <CardDescription>Distribution with median / mean markers</CardDescription>
@@ -695,10 +696,10 @@ export function DatasetStatsPage() {
           </Card>
         </section>
 
-        <section className="mb-6">
-          <h2 className="type-heading mb-4 text-lg">Conversion Funnel & Brand Efficiency</h2>
+        <section className="section-reveal section-delay-3 mb-6">
+          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Conversion Funnel & Brand Efficiency</ScrollText></h2>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Conversion Funnel</CardTitle>
                 <CardDescription>View → Cart → Purchase (% relative to views)</CardDescription>
@@ -738,7 +739,7 @@ export function DatasetStatsPage() {
               </CardContent>
             </Card>
 
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Brand Conversion Rate (Top 5)</CardTitle>
                 <CardDescription>Estimated purchase rate by brand share</CardDescription>
@@ -781,8 +782,8 @@ export function DatasetStatsPage() {
         </section>
 
         {/* Data Distribution Section - Power BI Style */}
-        <section className="mb-6">
-          <h2 className="type-heading mb-4 text-lg">Data Distribution</h2>
+        <section className="section-reveal section-delay-4 mb-6">
+          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Data Distribution</ScrollText></h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Horizontal Bar - Category Level 1 */}
             <HorizontalBarChartCard
@@ -793,7 +794,7 @@ export function DatasetStatsPage() {
 
             <PriceDistributionChartCard data={priceDistribution} />
 
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Brand Efficiency (Carts vs Conversion)</CardTitle>
                 <CardDescription>Bubble size encodes purchase volume</CardDescription>
@@ -846,11 +847,11 @@ export function DatasetStatsPage() {
         </section>
 
         {/* Model Section - Power BI Style */}
-        <section>
-          <h2 className="type-heading mb-4 text-lg">Model Intelligence</h2>
+        <section className="section-reveal section-delay-5">
+          <h2 className="type-heading mb-4 text-lg"><ScrollText effect="fadeIn">Model Intelligence</ScrollText></h2>
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Architecture Card */}
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Network className="h-4 w-4 text-[hsl(var(--info))]" />
@@ -903,7 +904,7 @@ export function DatasetStatsPage() {
             </Card>
 
             {/* Hyperparameters */}
-            <Card className="dashboard-card">
+            <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Settings2 className="h-4 w-4 text-[hsl(var(--info))]" />
@@ -928,7 +929,7 @@ export function DatasetStatsPage() {
             </Card>
 
             {/* Model Lineage */}
-            <Card className="dashboard-card lg:col-span-2">
+            <Card className="dashboard-card panel-accent lg:col-span-2">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-[hsl(var(--info))]" />
