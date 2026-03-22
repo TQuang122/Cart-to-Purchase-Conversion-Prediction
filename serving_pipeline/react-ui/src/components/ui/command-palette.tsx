@@ -2,7 +2,6 @@
 
 import {
   ChevronRight,
-  Clock,
   CornerDownLeft,
   Loader2,
   type LucideIcon,
@@ -40,8 +39,6 @@ export interface CommandPaletteProps {
   emptyMessage?: string;
   shortcut?: string[];
   loading?: boolean;
-  showRecent?: boolean;
-  maxRecent?: number;
 }
 
 interface FlattenedItem {
@@ -67,8 +64,6 @@ export function CommandPalette({
   emptyMessage = "No results found.",
   shortcut = ["⌘", "K"],
   loading = false,
-  showRecent = true,
-  maxRecent = 5,
 }: CommandPaletteProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -76,7 +71,6 @@ export function CommandPalette({
   const [pages, setPages] = useState<PageState[]>([
     { id: "root", title: "Root", groups: initialGroups },
   ]);
-  const [recentItems, setRecentItems] = useState<CommandItem[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -86,49 +80,10 @@ export function CommandPalette({
   const setOpen = onOpenChange ?? setInternalOpen;
   const currentPage = pages[pages.length - 1] || pages[0];
 
-  // Load recent items from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("jolyui-command-recent");
-      if (saved) {
-        try {
-          setRecentItems(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to load recent items", e);
-        }
-      }
-    }
-  }, []);
-
-  const saveRecent = useCallback(
-    (item: CommandItem) => {
-      setRecentItems((prev) => {
-        const filtered = prev.filter((i) => i.id !== item.id);
-        const updated = [item, ...filtered].slice(0, maxRecent);
-        localStorage.setItem("jolyui-command-recent", JSON.stringify(updated));
-        return updated;
-      });
-    },
-    [maxRecent],
-  );
-
   // Flatten and filter items based on search query
   const flattenedItems = useMemo(() => {
     const items: FlattenedItem[] = [];
     const currentGroups = currentPage?.groups || [];
-
-    // Add Recent group if on root page and query is empty
-    if (
-      pages.length === 1 &&
-      query === "" &&
-      showRecent &&
-      recentItems.length > 0
-    ) {
-      items.push({ type: "group", groupId: "recent", groupHeading: "Recent" });
-      recentItems.forEach((item) => {
-        items.push({ type: "item", groupId: "recent", item });
-      });
-    }
 
     currentGroups.forEach((group) => {
       const matchedItems: FlattenedItem[] = [];
@@ -164,7 +119,7 @@ export function CommandPalette({
     });
 
     return items;
-  }, [currentPage?.groups, query, pages.length, showRecent, recentItems]);
+  }, [currentPage?.groups, query]);
 
   const selectableItems = useMemo(
     () => flattenedItems.filter((item) => item.type === "item"),
@@ -226,11 +181,10 @@ export function CommandPalette({
 
       if (item.onSelect) {
         item.onSelect();
-        saveRecent(item);
         setOpen(false);
       }
     },
-    [saveRecent, setOpen],
+    [setOpen],
   );
 
   const handleBack = useCallback(() => {
@@ -309,7 +263,7 @@ export function CommandPalette({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+              className="flex flex-col overflow-hidden rounded-xl border border-border/85 bg-[hsl(var(--surface-1)/0.98)] shadow-2xl"
             >
               {/* Header / Search */}
               <div className="relative flex items-center gap-3 border-border border-b px-4">
@@ -387,7 +341,7 @@ export function CommandPalette({
                         return (
                           <div
                             key={`group-${flatItem.groupId}`}
-                            className="mt-2 px-3 py-2 font-bold text-[10px] text-muted-foreground/70 uppercase tracking-widest first:mt-0"
+                            className="mt-2 px-3 py-2 font-bold text-[10px] text-foreground/55 uppercase tracking-widest first:mt-0"
                           >
                             {flatItem.groupHeading}
                           </div>
@@ -414,10 +368,10 @@ export function CommandPalette({
                             if (el) itemRefs.current.set(currentItemIndex, el);
                           }}
                           className={cn(
-                            "group relative mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-150",
-                            isSelected &&
-                              "bg-accent text-accent-foreground shadow-sm",
-                          )}
+                              "group relative mx-2 flex cursor-pointer items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 transition-all duration-150",
+                              isSelected &&
+                                "border-[hsl(var(--interactive)/0.45)] bg-[hsl(var(--interactive)/0.28)] text-foreground shadow-sm",
+                            )}
                           onClick={() => handleSelect(item)}
                           onMouseEnter={() =>
                             setSelectedIndex(currentItemIndex)
@@ -426,7 +380,7 @@ export function CommandPalette({
                           {isSelected && (
                             <motion.div
                               layoutId="active-pill"
-                              className="absolute inset-0 -z-10 rounded-lg bg-accent"
+                              className="absolute inset-0 -z-10 rounded-lg bg-[hsl(var(--interactive)/0.16)]"
                               transition={{
                                 type: "spring",
                                 bounce: 0.2,
@@ -439,13 +393,11 @@ export function CommandPalette({
                             className={cn(
                               "flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
                               isSelected
-                                ? "border-primary/20 bg-background"
-                                : "border-transparent bg-muted/50",
+                                ? "border-[hsl(var(--interactive)/0.55)] bg-[hsl(var(--surface-1)/0.96)]"
+                                : "border-border/45 bg-[hsl(var(--surface-2)/0.66)]",
                             )}
                           >
-                            {flatItem.groupId === "recent" ? (
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                            ) : Icon ? (
+                            {Icon ? (
                               <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                             ) : (
                               <div className="h-1 w-1 rounded-full bg-muted-foreground" />
@@ -453,13 +405,13 @@ export function CommandPalette({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-foreground text-sm">
+                            <div className="truncate font-semibold text-foreground text-sm">
                               {highlightedLabel.map((part, i) => (
                                 <span
                                   key={i}
                                   className={
                                     part.highlighted
-                                      ? "font-semibold text-primary"
+                                      ? "font-bold text-[hsl(var(--interactive-hover))]"
                                       : undefined
                                   }
                                 >
@@ -468,7 +420,7 @@ export function CommandPalette({
                               ))}
                             </div>
                             {item.description && (
-                              <div className="mt-0.5 truncate text-muted-foreground text-xs">
+                              <div className={cn("mt-0.5 truncate text-xs", isSelected ? "text-foreground/85" : "text-foreground/70") }>
                                 {item.description}
                               </div>
                             )}

@@ -71,6 +71,8 @@ function App() {
   const [isIntroOpen, setIsIntroOpen] = useState(() => {
     if (typeof window === 'undefined') return false
     if (navigator.webdriver) return false
+    const navigationEntry = window.performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+    if (navigationEntry?.type === 'reload') return true
     return !window.localStorage.getItem(INTRO_SEEN_KEY)
   })
   const [introSessionKey, setIntroSessionKey] = useState(0)
@@ -173,7 +175,7 @@ function App() {
       items: [
         { id: 'action-intro', label: 'Show Introduction', description: 'View project introduction', icon: HelpCircle, onSelect: handleOpenIntro },
         { id: 'action-refresh', label: 'Refresh Stats', description: 'Update model statistics', shortcut: ['⌘R'], onSelect: () => {} },
-        { id: 'action-settings', label: 'Open Settings', description: 'Configure threshold and model', icon: Settings, onSelect: () => setIsSideRailOpen(true) },
+        { id: 'action-panel', label: 'Open Context Panel', description: 'View model and threshold controls', icon: Settings, onSelect: () => setIsSideRailOpen(true) },
       ],
     },
   ]
@@ -227,9 +229,9 @@ function App() {
                     </RainbowButton>
                   </Magnetic>
                   <Magnetic intensity={0.12} range={46}>
-                    <button type="button" onClick={() => setIsCommandPaletteOpen(true)} className="micro-interactive hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
+                    <button type="button" onClick={() => setIsCommandPaletteOpen(true)} title="Open command palette (⌘K)" aria-label="Open command palette" className="micro-interactive hidden items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary sm:flex">
                       <Command className="h-4 w-4" />
-                      <span>⌘K</span>
+                      <span>Commands</span>
                     </button>
                   </Magnetic>
                   <Magnetic intensity={0.12} range={46}>
