@@ -63,6 +63,10 @@
     --interactive-active: 160 72% 31%;
     --focus-ring: 160 84% 34%;
     --overlay-scrim: 214 55% 9%;
+    --highlight-primary: 160 84% 34%;
+    --highlight-secondary: 186 78% 41%;
+    --highlight-accent: 172 70% 41%;
+    --highlight-destructive: 342 82% 58%;
     --decor-rgb-1: 16 185 129;
     --decor-rgb-2: 13 148 136;
     --decor-rgb-3: 245 158 11;
@@ -121,6 +125,10 @@
     --interactive-active: 160 78% 40%;
     --focus-ring: 160 80% 46%;
     --overlay-scrim: 220 48% 7%;
+    --highlight-primary: 160 80% 46%;
+    --highlight-secondary: 186 78% 47%;
+    --highlight-accent: 172 70% 55%;
+    --highlight-destructive: 340 82% 65%;
     --decor-rgb-1: 52 211 153;
     --decor-rgb-2: 45 212 191;
     --decor-rgb-3: 250 204 21;
