@@ -10,12 +10,12 @@ from datetime import datetime
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import xgboost as xgb
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -44,7 +44,6 @@ else:
     _mlflow_import_error = None
 
 
-
 from api.schemas import (
     CartInputFeast,
     CartInputRaw,
@@ -63,10 +62,13 @@ _MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 
 _MODEL_PATHS: dict[ServingModel, Path] = {
     "xgboost": _MODELS_DIR / "xgboost_model.joblib",
+    "lightgbm": _MODELS_DIR / "lightgbm_model.joblib",
+    "catboost": _MODELS_DIR / "catboost_model.joblib",
 }
 _ENCODER_PATH = _MODELS_DIR / "encoders.json"
 
-DEFAULT_MODEL_KEY: ServingModel = os.getenv("DEFAULT_SERVING_MODEL", "xgboost")  # type: ignore[assignment]
+_default_model_raw = os.getenv("DEFAULT_SERVING_MODEL", "xgboost")
+DEFAULT_MODEL_KEY: ServingModel = "xgboost"
 
 MODEL_REGISTRY_NAMES: dict[ServingModel, str] = {
     "xgboost": os.getenv("MLFLOW_MODEL_NAME_XGBOOST", "xgboost_ctp"),
@@ -78,9 +80,11 @@ MODEL_ALIASES: dict[ServingModel, str] = {
     "lightgbm": os.getenv("MLFLOW_MODEL_ALIAS_LIGHTGBM", "champion"),
     "catboost": os.getenv("MLFLOW_MODEL_ALIAS_CATBOOST", "champion"),
 }
-VALID_MODELS: tuple[ServingModel, ...] = ("xgboost",)
+VALID_MODELS: tuple[ServingModel, ...] = ("xgboost", "lightgbm", "catboost")
 if DEFAULT_MODEL_KEY not in VALID_MODELS:
     DEFAULT_MODEL_KEY = "xgboost"
+if _default_model_raw in VALID_MODELS:
+    DEFAULT_MODEL_KEY = cast(ServingModel, _default_model_raw)
 
 
 # Feature column order (must match training order exactly)
@@ -168,8 +172,6 @@ def _load_encoders() -> dict[str, Any]:
         return json.load(f)
 
 
-
-
 class _MLflowPyFuncWrapper:
     """Wraps mlflow.pyfunc.PyFuncModel to expose sklearn-like .predict_proba().
 
@@ -203,9 +205,7 @@ class _MLflowPyFuncWrapper:
             if isinstance(encoder, dict) and "mapping" in encoder:
                 mapping = encoder["mapping"]
                 gm = encoder.get("global_mean", 0.26)
-                df[col] = df[col].astype(str).map(
-                    lambda x: mapping.get(x.strip(), gm)
-                )
+                df[col] = df[col].astype(str).map(lambda x: mapping.get(x.strip(), gm))
             elif hasattr(encoder, "transform"):
                 df[col] = encoder.transform(df[col].astype(str))
         return df[feat_names]
@@ -227,7 +227,21 @@ class _MLflowPyFuncWrapper:
 
     def get_booster(self):
         """Return the underlying XGBoost booster for SHAP/contrib extraction."""
-        return self._inner().get_booster()
+        inner = self._inner()
+        if hasattr(inner, "get_booster"):
+            return inner.get_booster()
+        raise AttributeError("Inner model has no get_booster()")
+
+    @property
+    def feature_importances_(self):
+        """Expose feature importances for LightGBM/CatBoost/sklearn fallback."""
+        inner = self._inner()
+        if hasattr(inner, "feature_importances_"):
+            return inner.feature_importances_
+        if hasattr(inner, "get_feature_importance"):
+            return inner.get_feature_importance()
+        return None
+
 
 def _load_bundle_from_mlflow(model_key: ServingModel) -> ModelBundle:
     """Load model from MLflow model registry.
@@ -262,13 +276,19 @@ def _load_bundle_from_mlflow(model_key: ServingModel) -> ModelBundle:
         mv = client.get_model_version_by_alias(model_name, alias)
         run_id = getattr(mv, "run_id", None)
         version = str(mv.version)
+        source_uri = getattr(mv, "source", None)
         bundle["run_id"] = run_id
-        print(f"[predict] Model version={version}, run_id={run_id}")
+        print(
+            f"[predict] Model version={version}, run_id={run_id}, source={source_uri}"
+        )
 
         # Download model artifact from MinIO
         import boto3
         from botocore.config import Config
-        s3_endpoint = MLFLOW_S3_ENDPOINT_URL.replace("http://", "").replace("https://", "")
+
+        s3_endpoint = MLFLOW_S3_ENDPOINT_URL.replace("http://", "").replace(
+            "https://", ""
+        )
         s3 = boto3.client(
             "s3",
             endpoint_url=f"http://{s3_endpoint}",
@@ -278,46 +298,67 @@ def _load_bundle_from_mlflow(model_key: ServingModel) -> ModelBundle:
             config=Config(signature_version="s3v4"),
         )
 
-        # Try known model UUID path first
-        model_uuid = None
-        known_path = "models/m-2810ba11c72c458ebf55fec5b62818d0/artifacts"
-        try:
-            s3.head_object(Bucket="mlflow", Key=f"{known_path}/python_model.pkl")
-            model_uuid = "m-2810ba11c72c458ebf55fec5b62818d0"
-            print(f"[predict] Found model at known path: {known_path}")
-        except Exception:
-            print("[predict] Scanning MinIO for model artifact...")
+        # Resolve exact artifact path from MLflow model version source URI
+        if source_uri and source_uri.startswith("s3://"):
+            source_no_scheme = source_uri[len("s3://") :]
+            source_parts = source_no_scheme.split("/", 1)
+            bucket_name = source_parts[0]
+            key_prefix = source_parts[1] if len(source_parts) > 1 else ""
+            model_s3_key = f"{key_prefix.rstrip('/')}/python_model.pkl"
+        elif source_uri and source_uri.startswith("models:/m-"):
+            # MLflow 3.x model-centric URI, e.g. models:/m-<uuid>
+            model_id = source_uri[len("models:/") :].strip("/")
+            bucket_name = "mlflow"
+            target_suffix = f"models/{model_id}/artifacts/python_model.pkl"
+            model_s3_key = None
             paginator = s3.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket="mlflow", Prefix="models/"):
+            for page in paginator.paginate(Bucket=bucket_name):
+                for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    if key.endswith(target_suffix):
+                        model_s3_key = key
+                        break
+                if model_s3_key:
+                    break
+            if model_s3_key is None:
+                raise RuntimeError(
+                    f"Could not resolve MLflow model artifact key for model_id={model_id}"
+                )
+        else:
+            print(
+                "[predict] Source URI missing/unsupported, scanning MinIO model artifact paths..."
+            )
+            bucket_name = "mlflow"
+            model_s3_key = None
+            paginator = s3.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=bucket_name, Prefix="models/"):
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
                     if key.endswith("/python_model.pkl"):
-                        model_dir = key.rsplit("/", 1)[0]
-                        model_uuid = model_dir.split("/")[1]
-                        print(f"[predict] Found model at: {model_dir}")
+                        model_s3_key = key
                         break
-                if model_uuid:
+                if model_s3_key:
                     break
+            if model_s3_key is None:
+                raise RuntimeError(
+                    "Could not find python_model.pkl in MinIO model artifacts."
+                )
 
-        if model_uuid is None:
-            raise RuntimeError(
-                "Could not find python_model.pkl in MinIO model artifacts."
-            )
-
-        # Download python_model.pkl
-        model_s3_key = f"models/{model_uuid}/artifacts/python_model.pkl"
         import tempfile
         import joblib
+
         with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as tmp:
             tmp_path = tmp.name
-        s3.download_file("mlflow", model_s3_key, tmp_path)
+        s3.download_file(bucket_name, model_s3_key, tmp_path)
         model = joblib.load(tmp_path)
         os.unlink(tmp_path)
 
         wrapped = _MLflowPyFuncWrapper(model)
         bundle["model"] = wrapped
         bundle["last_loaded_at"] = datetime.now().isoformat()
-        print(f"[predict] Loaded {model_key} from MLflow/MinIO: s3://mlflow/{model_s3_key}")
+        print(
+            f"[predict] Loaded {model_key} from MLflow/MinIO: s3://{bucket_name}/{model_s3_key}"
+        )
     except Exception as exc:
         bundle["model_load_error"] = str(exc)
         print(f"[predict] Failed to load {model_key} from MLflow: {exc}")
@@ -365,8 +406,13 @@ def _load_models() -> None:
         bundle = _load_bundle_from_mlflow(model_key)
         if bundle["model"] is None:
             # Fall back to local disk
-            print(f"[predict] MLflow load failed for {model_key}, falling back to local disk")
+            print(
+                f"[predict] MLflow load failed for {model_key}, falling back to local disk"
+            )
             bundle = _load_bundle_from_disk(model_key)
+        if bundle["model"] is None:
+            # Last-resort deterministic inference path in _predict_from_raw
+            bundle["model_source"] = "heuristic_fallback"
         bundles[model_key] = bundle
     _model_bundles = bundles
 
@@ -574,6 +620,7 @@ def _fetch_raw_from_feast(payload: CartInputFeast) -> CartInputRaw:
         category_code_level2=get_str(prod_row, "category_code_level2"),
     )
 
+
 def _record_quality(quality: FeatureQuality) -> None:
     _quality_history.append(
         {
@@ -650,6 +697,7 @@ def _extract_feature_contributions(
             ], baseline_score
     except Exception as exc:
         import traceback
+
         print(f"[predict] _extract_feature_contributions failed: {exc}")
         traceback.print_exc()
         pass
@@ -764,7 +812,7 @@ def _predict_from_raw(
         # Local disk models use pre-encoded df and have get_booster() on the model itself.
         if model_source == "mlflow_registry":
             contrib_model = model  # MLflowPyFuncWrapper has get_booster()
-            encoded_df = model._encode(df)       # apply same encoding as predict()
+            encoded_df = model._encode(df)  # apply same encoding as predict()
             # Pad missing columns with 0 (model trained on subset of ALL_FEATURES)
             for col in ALL_FEATURES:
                 if col not in encoded_df.columns:
@@ -938,21 +986,6 @@ def _preprocess_raw_lite(
     )
 
     return full, quality
-
-
-# ─────────────────────────────────────────────────────────────────
-# CORS OPTIONS handlers
-# ─────────────────────────────────────────────────────────────────
-
-
-@router.options("/raw")
-def predict_raw_options() -> Response:
-    return Response(status_code=200)
-
-
-@router.options("/raw-lite")
-def predict_raw_lite_options() -> Response:
-    return Response(status_code=200)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -1132,7 +1165,6 @@ def predict_feast(
                 f"user_id={payload.user_id}, product_id={payload.product_id}, error={exc}"
             ),
         ) from exc
-
 
 
 @router.get("/stats")

@@ -23,12 +23,16 @@ data:
   DEFAULT_SERVING_MODEL: "xgboost"
   MLFLOW_MODEL_NAME_XGBOOST: "purchase_propensity_model"
   MLFLOW_MODEL_ALIAS_XGBOOST: "staging"
+  MLFLOW_MODEL_NAME_LIGHTGBM: "lightgbm_ctp"
+  MLFLOW_MODEL_ALIAS_LIGHTGBM: "staging"
+  MLFLOW_MODEL_NAME_CATBOOST: "catboost_ctp"
+  MLFLOW_MODEL_ALIAS_CATBOOST: "staging"
 
   # Prediction
   PREDICT_THRESHOLD: "0.525"
 
-  # CORS (allow all origins for dev)
-  CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+  CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://cart-to-purchase-conversion-predict.vercel.app"
+  CORS_ORIGIN_REGEX: "^https?://(localhost|127\\.0\\.0\\.1|.*\\.vercel\\.app|.*\\.trycloudflare\\.com)(:\\d+)?$"
 
   # Feature store (local parquet fallback)
   FEAST_REPO_PATH: "/app/models/feast_repo"

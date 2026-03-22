@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python deps (--user puts packages in /root/.local)
 COPY serving_pipeline/requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN PIP_DEFAULT_TIMEOUT=1000 pip install --no-cache-dir --user -r requirements.txt
 
 # =============================================================================
 # Final stage
