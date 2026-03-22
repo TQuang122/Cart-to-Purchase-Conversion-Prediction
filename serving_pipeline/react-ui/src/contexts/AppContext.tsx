@@ -38,7 +38,7 @@ const DEFAULT_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0
 
 const initialState: AppState = {
   apiBaseUrl: DEFAULT_API_BASE_URL,
-  selectedModel: 'xgboost',
+  selectedModel: 'catboost',
   selectedThreshold: 0.525,
   activeRequests: 0,
   errorMessage: null,

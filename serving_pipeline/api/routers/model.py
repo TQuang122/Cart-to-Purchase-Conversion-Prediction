@@ -18,7 +18,9 @@ from api.schemas import (
     ServingModel,
 )
 
-os.environ.setdefault("MLFLOW_S3_ENDPOINT_URL", "http://minio.mlops.svc.cluster.local:9000")
+os.environ.setdefault(
+    "MLFLOW_S3_ENDPOINT_URL", "http://minio.mlops.svc.cluster.local:9000"
+)
 os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minio123")
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
@@ -36,6 +38,7 @@ except Exception:
     yaml = None
 
 import os
+
 os.environ.setdefault("MLFLOW_REQUEST_TIMEOUT", "3")
 router = APIRouter(prefix="/model", tags=["model"])
 
@@ -78,6 +81,44 @@ def _load_config(model: ServingModel) -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 
+def _get_feature_schema_from_loaded_bundle(
+    model: ServingModel,
+) -> tuple[list[str], list[str], list[str]] | None:
+    try:
+        from api.routers import predict as predict_router
+    except Exception:
+        return None
+
+    bundles = getattr(predict_router, "_model_bundles", {})
+    bundle = bundles.get(model)
+    if not isinstance(bundle, dict):
+        return None
+
+    loaded_model = bundle.get("model")
+    if loaded_model is None:
+        return None
+
+    pyfunc_wrapper = getattr(loaded_model, "_pyfunc", None)
+    if pyfunc_wrapper is not None:
+        feature_names = list(getattr(pyfunc_wrapper, "feature_names", []) or [])
+        encoder_map = dict(getattr(pyfunc_wrapper, "feature_encoders", {}) or {})
+    else:
+        feature_names_in = getattr(loaded_model, "feature_names_in_", None)
+        feature_names = list(feature_names_in) if feature_names_in is not None else []
+        encoder_map = {}
+
+    if not feature_names:
+        return None
+
+    canonical_categorical = {"brand", "category_code_level1", "category_code_level2"}
+    categorical_set = set(encoder_map.keys()) | (
+        set(feature_names) & canonical_categorical
+    )
+    categorical_features = [name for name in feature_names if name in categorical_set]
+    numeric_features = [name for name in feature_names if name not in categorical_set]
+    return feature_names, numeric_features, categorical_features
+
+
 def _get_mlflow_client() -> Any | None:
     if mlflow is None:
         return None
@@ -97,7 +138,7 @@ def _get_model_version(client: Any, model: ServingModel) -> Any | None:
             return None
         if not versions:
             return None
-        return max(versions, key=lambda item: int(item.version))
+        return max(versions, key=lambda item: int(getattr(item, "version", 0) or 0))
 
 
 def _get_best_hpo_run(client: Any) -> tuple[float | None, dict[str, Any] | None]:
@@ -204,6 +245,11 @@ def get_model_architecture(
         feature for feature in training_features if feature not in categorical_features
     ]
 
+    if not training_features:
+        fallback_schema = _get_feature_schema_from_loaded_bundle(model)
+        if fallback_schema is not None:
+            training_features, numeric_features, categorical_features = fallback_schema
+
     return ModelArchitectureResponse(
         model_key=model,
         model_type=str(model_config.get("model_type", model)),
@@ -268,7 +314,9 @@ def get_model_lineage(
         raw_versions = []
 
     for version in sorted(
-        raw_versions, key=lambda item: int(item.version), reverse=True
+        raw_versions,
+        key=lambda item: int(getattr(item, "version", 0) or 0),
+        reverse=True,
     ):
         aliases = list(getattr(version, "aliases", []) or [])
         versions.append(
