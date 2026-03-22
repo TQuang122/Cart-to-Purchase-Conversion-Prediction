@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -155,6 +155,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
   const [showPresets, setShowPresets] = useState(false)
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<Date | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
+  const resultRef = useRef<HTMLDivElement | null>(null)
 
   const onSubmit = useCallback(async (values: RawFeaturesFormValues) => {
     dispatch({ type: 'clearError' })
@@ -233,6 +234,12 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
     const preset = PRESET_SCENARIOS.find(item => item.id === autoApplyPresetId)
     if (preset) applyPreset(preset)
   }, [applyPreset, autoApplyPresetId, autoApplyPresetToken])
+
+  useEffect(() => {
+    if (!prediction || !resultRef.current) return
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    resultRef.current.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  }, [prediction])
 
   const confidenceSignals = useMemo(() => {
     if (prediction?.explainability?.top_signals?.length) return toConfidenceSignals(prediction.explainability.top_signals)
@@ -345,7 +352,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
         {state.errorMessage ? <StatusBanner variant="error" message={state.errorMessage} className="mt-6" /> : null}
         {!prediction && !isLoading && <div className="type-body mt-6 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-center text-sm">Fill the main fields above and run Predict. Remaining model features will be preprocessed automatically.</div>}
         {prediction && (
-          <>
+          <div ref={resultRef}>
             {prediction.feature_quality && (
               <div className="mt-6 space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -357,7 +364,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
               </div>
             )}
             <PredictionResultCard prediction={prediction} previousPrediction={previousPrediction} context="raw" onPredictAgain={() => setPrediction(null)} onTryPreset={() => applyPreset(PRESET_SCENARIOS[0])} confidenceSignals={confidenceSignals} />
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

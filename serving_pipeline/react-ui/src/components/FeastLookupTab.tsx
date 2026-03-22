@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { DatabaseZap } from 'lucide-react'
@@ -50,6 +50,7 @@ export const FeastLookupTab = () => {
   const [lastLookupInput, setLastLookupInput] = useState<FeastLookupFormValues | null>(null)
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<Date | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
+  const resultRef = useRef<HTMLDivElement | null>(null)
 
   const onSubmit = useCallback(async (values: FeastLookupFormValues) => {
     dispatch({ type: 'clearError' })
@@ -114,6 +115,12 @@ export const FeastLookupTab = () => {
 
     return () => subscription.unsubscribe()
   }, [form])
+
+  useEffect(() => {
+    if (!prediction || !resultRef.current) return
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    resultRef.current.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  }, [prediction])
 
   // Keyboard shortcut: Ctrl+Enter to submit
   useEffect(() => {
@@ -272,13 +279,15 @@ export const FeastLookupTab = () => {
         )}
 
         {prediction ? (
-          <PredictionResultCard
-            prediction={prediction}
-            previousPrediction={previousPrediction}
-            context="feast"
-            onPredictAgain={() => setPrediction(null)}
-            confidenceSignals={feastConfidenceSignals}
-          />
+          <div ref={resultRef}>
+            <PredictionResultCard
+              prediction={prediction}
+              previousPrediction={previousPrediction}
+              context="feast"
+              onPredictAgain={() => setPrediction(null)}
+              confidenceSignals={feastConfidenceSignals}
+            />
+          </div>
         ) : null}
       </CardContent>
     </Card>

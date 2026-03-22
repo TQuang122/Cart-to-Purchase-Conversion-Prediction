@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, FileText, X, Download, Files } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
@@ -121,6 +121,7 @@ export const BatchCsvTab = () => {
   const [simulatorThreshold, setSimulatorThreshold] = useState<number | null>(null)
   const [chartLinkedFilter, setChartLinkedFilter] = useState<ChartLinkedFilter | null>(null)
   const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null)
+  const resultsSectionRef = useRef<HTMLDivElement | null>(null)
 
   const effectiveThresholdFor = useCallback(
     (item: CartPrediction) => simulatorThreshold ?? getDecisionThreshold(item),
@@ -305,6 +306,12 @@ export const BatchCsvTab = () => {
 
     return () => window.clearInterval(timer)
   }, [estimatedRows, isLoading, uploadStartAt])
+
+  useEffect(() => {
+    if (results.length === 0 || !resultsSectionRef.current) return
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    resultsSectionRef.current.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  }, [results])
 
   const onUpload = useCallback(async () => {
     if (!selectedFile) {
@@ -549,7 +556,7 @@ export const BatchCsvTab = () => {
         )}
 
         {results.length > 0 ? (
-          <div className="space-y-4">
+          <div ref={resultsSectionRef} className="space-y-4">
             <div aria-live="polite" aria-atomic="false" className="grid grid-cols-1 gap-3 md:grid-cols-5">
               {[
                 {
