@@ -9,7 +9,7 @@ import { ChatbotWidget } from '@/components/ChatbotWidget'
 import { MeshGradient } from '@/components/MeshGradient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CommandPalette, type CommandGroup } from '@/components/ui/command-palette'
-import { TypewriterText } from '@/components/ui/typewritter-text'
+import { MorphingText } from '@/components/ui/text-morphing'
 import { FeedbackWidget } from '@/components/ui/feedback-widget'
 import { Magnetic } from '@/components/ui/magnetic'
 import { RainbowButton } from '@/components/ui/rainbow-button'
@@ -203,12 +203,11 @@ function App() {
                 <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
                   <NeuralCartMark variant="halo" />
                   <span>Cart-to-Purchase</span>
-                  <TypewriterText 
+                  <MorphingText
                     words={['Workspace', 'Studio', 'Dashboard', 'Predictor']} 
                     className="text-[hsl(var(--interactive))]"
-                    typingSpeed={80}
-                    deletingSpeed={40}
-                    pauseDuration={2000}
+                    interval={2000}
+                    animationDuration={0.45}
                   />
                 </h1>
                 <div className="flex items-center gap-2">
@@ -233,7 +232,12 @@ function App() {
             </section>
             <section className="mt-6 dashboard-shell dashboard-card-scale-md animate-slide-up p-3 sm:p-4" style={{ animationDelay: '180ms' }}>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg"><Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" /><ScrollText effect="fadeUp"><span>Prediction studio</span></ScrollText></h2>
+                <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg">
+                  <Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" />
+                  <ScrollText effect="fadeIn" className="inline-flex items-center">
+                    <span>Prediction studio</span>
+                  </ScrollText>
+                </h2>
                 <p className="tone-chip type-kicker px-2.5 py-1">Action-first</p>
               </div>
               <div className="state-banner state-banner-ready mb-4" role="status">
