@@ -8,6 +8,7 @@ import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
 import { ChatbotWidget } from '@/components/ChatbotWidget'
 import { MeshGradient } from '@/components/MeshGradient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { CommandPalette, type CommandGroup } from '@/components/ui/command-palette'
 import { MorphingText } from '@/components/ui/text-morphing'
 import { FeedbackWidget } from '@/components/ui/feedback-widget'
@@ -273,10 +274,39 @@ function App() {
                   </div>
                 </div>
                 {isSideRailOpen ? (
-                  <aside className="space-y-3">
+                  <div className="space-y-3 lg:contents">
+                    <Collapsible className="rounded-2xl border border-border/80 bg-surface-2/90 p-2 lg:hidden">
+                      <CollapsibleTrigger className="type-kicker w-full border border-border/60 bg-background/35 text-left text-text-primary">
+                        Context and controls
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="space-y-3">
+                          <Card>
+                            <CardHeader className="border-b border-border/78 pb-3">
+                              <CardTitle className="text-base">Context</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 pt-4">
+                              <div><p className="type-kicker">Model</p><p className="type-body mt-1 font-medium">{state.selectedModel}</p></div>
+                              <div><p className="type-kicker">Threshold</p><p className="type-body mt-1 font-medium">{state.selectedThreshold}</p></div>
+                              <div><p className="type-kicker">Hint</p><p className="type-body mt-1 text-text-secondary">{primaryHint[activeTab]}</p></div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader className="border-b border-border/78 pb-3">
+                              <CardTitle className="text-base">Controls</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                              <button type="button" onClick={handleOpenIntro} className="type-body w-full rounded-lg border border-border/80 bg-surface-2/80 px-3 py-2 text-left text-text-secondary hover:border-[hsl(var(--interactive)/0.48)] hover:bg-surface-2]">View intro</button>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  <aside className="hidden space-y-3 lg:block">
                     <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Context</CardTitle></CardHeader><CardContent className="pt-4 space-y-4"><div><p className="type-kicker">Model</p><p className="type-body mt-1 font-medium">{state.selectedModel}</p></div><div><p className="type-kicker">Threshold</p><p className="type-body mt-1 font-medium">{state.selectedThreshold}</p></div><div><p className="type-kicker">Hint</p><p className="type-body mt-1 text-text-secondary">{primaryHint[activeTab]}</p></div></CardContent></Card>
                     <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Controls</CardTitle></CardHeader><CardContent className="pt-4"><button type="button" onClick={handleOpenIntro} className="type-body w-full rounded-lg border border-border/80 bg-surface-2/80 px-3 py-2 text-left text-text-secondary hover:border-[hsl(var(--interactive)/0.48)] hover:bg-surface-2]">View intro</button></CardContent></Card>
                   </aside>
+                  </div>
                 ) : null}
               </div>
             </section>

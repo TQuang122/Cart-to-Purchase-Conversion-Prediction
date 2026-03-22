@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, RotateCcw, Sparkles, Wand2, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Magnetic } from '@/components/ui/magnetic'
 import { cn } from '@/lib/utils'
 import type { CartPrediction } from '@/types/api'
@@ -279,66 +280,75 @@ export const PredictionResultCard = ({
             </div>
           ) : null}
 
-          <div className="rounded-lg border border-border/55 bg-background/45 p-3">
-            <p className="type-kicker mb-2 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
-              Mini insights
-            </p>
-            <ul className="space-y-1.5 text-xs text-muted-foreground sm:text-sm">
-              {insights.map((line) => (
-                <li key={line}>- {line}</li>
-              ))}
-            </ul>
-          </div>
+          <Collapsible defaultOpen className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <CollapsibleTrigger className="type-kicker w-full border border-border/50 bg-background/35 text-left text-text-primary hover:bg-background/45">
+              <span className="inline-flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Mini insights
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="space-y-1.5 text-xs text-muted-foreground sm:text-sm">
+                {insights.map((line) => (
+                  <li key={line}>- {line}</li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
 
-          <div className="rounded-lg border border-border/55 bg-background/45 p-3">
-            <p className="type-kicker mb-2 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
-              Confidence explanation
-            </p>
-
-            <div className="mb-3 grid gap-2 sm:grid-cols-3">
-              {confidenceLegend.map((item) => (
-                <div key={item.label} className="flex h-full flex-col rounded-md border border-border/50 bg-background/35 p-2.5">
-                  <div className="mb-1.5 space-y-1">
-                    <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold', item.tone)}>{item.label}</span>
-                    <p className="type-kicker break-words leading-snug">{item.range}</p>
-                  </div>
-                  <p className="type-caption">{item.hint}</p>
-                </div>
-              ))}
-            </div>
-
-            {confidenceSignals.length > 0 ? (
-              <div className="space-y-2.5">
-                {confidenceSignals.map((signal) => {
-                  const style = signalStyles[signal.impact]
-                  const signalStrength = Math.max(10, Math.min(100, Math.round(signal.strength * 100)))
-
-                  return (
-                    <div key={`${signal.label}-${signal.detail}`} className="rounded-md border border-border/50 bg-background/35 p-2.5">
-                      <div className="mb-1.5 flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-xs font-semibold text-foreground sm:text-sm">{signal.label}</p>
-                          <p className="type-caption sm:text-xs">{signal.detail}</p>
-                        </div>
-                        <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold', style.badge)}>
-                          {style.icon}
-                          {style.label}
-                        </span>
-                      </div>
-
-                      <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
-                        <div className={cn('h-full transition-[width] duration-500', style.bar)} style={{ width: `${signalStrength}%` }} />
-                      </div>
+          <Collapsible className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <CollapsibleTrigger className="type-kicker w-full border border-border/50 bg-background/35 text-left text-text-primary hover:bg-background/45">
+              <span className="inline-flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Confidence explanation
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mb-3 grid gap-2 sm:grid-cols-3">
+                {confidenceLegend.map((item) => (
+                  <div key={item.label} className="flex h-full flex-col rounded-md border border-border/50 bg-background/35 p-2.5">
+                    <div className="mb-1.5 space-y-1">
+                      <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold', item.tone)}>{item.label}</span>
+                      <p className="type-kicker break-words leading-snug">{item.range}</p>
                     </div>
-                  )
-                })}
+                    <p className="type-caption">{item.hint}</p>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No confidence signals available for this prediction.</p>
-            )}
-          </div>
+
+              {confidenceSignals.length > 0 ? (
+                <div className="space-y-2.5">
+                  {confidenceSignals.map((signal) => {
+                    const style = signalStyles[signal.impact]
+                    const signalStrength = Math.max(10, Math.min(100, Math.round(signal.strength * 100)))
+
+                    return (
+                      <div key={`${signal.label}-${signal.detail}`} className="rounded-md border border-border/50 bg-background/35 p-2.5">
+                        <div className="mb-1.5 flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-foreground sm:text-sm">{signal.label}</p>
+                            <p className="type-caption sm:text-xs">{signal.detail}</p>
+                          </div>
+                          <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold', style.badge)}>
+                            {style.icon}
+                            {style.label}
+                          </span>
+                        </div>
+
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+                          <div className={cn('h-full transition-[width] duration-500', style.bar)} style={{ width: `${signalStrength}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="state-banner state-banner-warning mt-2" role="status">
+                  <span>No confidence signals available for this prediction.</span>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border/55 pt-3">
             {onPredictAgain ? (
