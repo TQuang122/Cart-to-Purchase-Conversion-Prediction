@@ -1,197 +1,151 @@
 # Cart-to-Purchase Conversion Prediction
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![MLflow](https://img.shields.io/badge/MLflow-Latest-orange.svg)](https://mlflow.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-Tracking-orange.svg)](https://mlflow.org/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-KinD%20Ready-326CE5.svg)](https://kubernetes.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-3.0.1-red.svg)](https://xgboost.readthedocs.io/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 
-**Problem**: Given a user adding a product to cart, will they complete the purchase?
+An end-to-end MLOps system that predicts whether a user will complete a purchase after adding an item to cart. The project covers data processing, model training, registry-based deployment, and a production-style inference UI.
 
-This project implements a full MLOps pipeline — from raw e-commerce event data to a production-ready prediction API deployed on Kubernetes.
+## Overview
 
----
+- Problem type: conditional binary classification after a `cart` event
+- Serving style: online API (single + batch prediction)
+- Training and registry: MLflow + MinIO artifacts
+- Orchestration: Airflow DAGs on Kubernetes
+- Frontend: React 19 + Vite dashboard for prediction and model exploration
 
-## 🎯 Problem Statement
+## Data Source
 
-Cart-to-purchase conversion is formulated as a **conditional binary classification**: the target is defined only after an add-to-cart event has occurred.
+Dataset: [eCommerce Behavior Data from Multi Category Store (Kaggle)](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store/data)
 
-| Label | Condition |
-|-------|-----------|
-| `1` (purchase) | User added product to cart → then purchased it |
-| `0` (no purchase) | User added product to cart → but never purchased |
+- Scale: 285M+ events (Oct 2019 to Apr 2020)
+- Core events: `view`, `cart`, `remove_from_cart`, `purchase`
+- Typical fields: `event_time`, `product_id`, `category_code`, `brand`, `price`, `user_id`, `user_session`
 
----
+Target definition:
 
-## 📊 Data Source
+- `1` (purchase): user added to cart, then purchased
+- `0` (no purchase): user added to cart, but did not purchase
 
-> [eCommerce Behavior Data from Multi Category Store](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store/data) — 285M+ events, Oct 2019 – Apr 2020, Open CDP project.
+## Architecture
 
-| Field | Description |
-|-------|-------------|
-| `event_time` | UTC timestamp |
-| `event_type` | `view`, `cart`, `remove_from_cart`, `purchase` |
-| `product_id` | Product identifier |
-| `category_id` | Category identifier |
-| `category_code` | Hierarchical taxonomy (e.g. `electronics.audio.headphones`) |
-| `brand` | Brand name (lowercase, may be missing) |
-| `price` | Product price |
-| `user_id` | Permanent user identifier |
-| `user_session` | Temporary session ID |
+### Mode A: KinD Kubernetes (recommended)
 
----
+- Infrastructure in cluster (`namespace: mlops`): MLflow, MinIO, PostgreSQL, Kafka, Airflow
+- Serving API (FastAPI) deployed as Kubernetes workload
+- Model pulled from MLflow Registry alias and served via `/predict/*`
 
-## 🏗️ Architecture
+### Mode B: Local Docker Compose (development)
 
-### Two Deployment Modes
+- Start local infra via `infra/docker/run.sh up`
+- Run FastAPI app directly with Uvicorn
+- Run React UI in Vite dev mode
 
-#### Mode A: KinD Kubernetes (production-style, full MLOps)
+## Repository Layout
 
-```
-┌───────────────────────────────────────────────────────────┐
-│                KinD Cluster (kind ctp-cluster)            │
-│                      namespace: mlops                     │
-├───────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │PostgreSQL│  │  MinIO   │  │  MLflow  │  │   Kafka  │   │
-│  │  :5432   │  │:9000/9001│  │  :5000   │  │  :9092   │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│                                                           │
-│  ┌──────────────────────┐  ┌──────────────────────────┐   │
-│  │  Apache Airflow      │  │    Serving API (FastAPI) │   │
-│  │  :8080 (webserver)   │  │    :8000 (ClusterIP)     │   │
-│  └──────────────────────┘  │    image: ctpserving:v14  │
-│                            └─────────────────┬────────┘   │   
-│                                              │            │
-│                                              ▼            │
-│                                     GET /predict/stats    │
-│                                     POST /predict/raw-lite│
-│                                     POST /predict/feast   │
-└───────────────────────────────────────────────────────────┘
+```text
+.
+├── data_pipeline/                 # Data processing and feature generation
+├── model_pipeline/                # Model training, configs, tests, notebooks
+│   └── src/
+├── serving_pipeline/
+│   ├── api/                       # FastAPI app and routers
+│   └── react-ui/                  # React 19 dashboard (Vite)
+├── infra/
+│   ├── docker/                    # Local docker-compose orchestration
+│   └── k8s/                       # KinD Kubernetes manifests and scripts
+├── scripts/                       # Ops helper scripts (tunnel, smoke checks, sync)
+└── Dockerfile.serving             # Serving API container image
 ```
 
-#### Mode B: Docker Compose (local dev)
+## Quick Start
 
-```
-┌─────────────────────────────────────────────────┐
-│  docker compose (./infra/docker/run.sh up)      │
-│                                                 │
-│  MLflow :5000  |  MinIO :9000  |  Kafka :9092   │
-│  Airflow :8090  |  MySQL :3306                  │
-└─────────────────────────────────────────────────┘
-                          │
-                          ▼
-         ┌─────────────────────────────────┐
-         │  FastAPI (uvicorn :8000)        │
-         │  serving_pipeline/              │
-         │  conda env: propensity_mlops    │
-         └─────────────────────────────────┘
-```
-
----
-
-## 🔄 Pipeline Overview
-
-```
-[Raw Events CSV]
-       │
-       ▼
-[data_pipeline/]          Feature engineering → Parquet features
-       │                     (user/product features, no Feast)
-       ▼
-[model_pipeline/]          XGBoost training + TabICL comparison
-       │                     • MLflow experiment tracking
-       │                     • Hyperparameter tuning
-       │                     • Model registry → MinIO S3
-       ▼
-[infra/k8s/]               Airflow DAG: train → register → serve
-       │
-       ▼
-[serving_pipeline/]        FastAPI serving
-       │                     • Loads model from K8s MLflow registry
-       │                     • BinaryClassifierWrapper + XGBClassifier
-       │                     • Threshold: 0.525
-       ▼
-[React 19 UI]              Vercel or local npm run dev
-       │                     • Prediction UI
-       │                     • Dataset explorer
-       │                     • Model monitoring
-       ▼
-[End User]
-```
-
----
-
-## 🚀 Quick Start
-
-### Option A: KinD Kubernetes (recommended for full MLOps)
+### 1) Kubernetes path (full MLOps flow)
 
 ```bash
-# 1. Create KinD cluster
+# Create KinD cluster
 kind create cluster --name ctp-cluster
 
-# 2. Deploy all MLOps infrastructure
-cd infra/k8s && ./deploy.sh
+# Deploy platform components
+./infra/k8s/deploy.sh
 
-# 3. Verify all pods are running
+# Verify
 kubectl get pods -n mlops
 
-# 4. Build & deploy serving API
-cd serving_pipeline
-docker build -f Dockerfile.serving -t ctpserving:v14 .
-kind load docker-image ctpserving:v14 --name ctp-cluster
+# Build and deploy serving image
+docker build -f Dockerfile.serving -t ctpserving:local .
+kind load docker-image ctpserving:local --name ctp-cluster
 kubectl apply -f infra/k8s/serving/
 
-# 5. Access serving API
+# Expose API
 kubectl port-forward -n mlops svc/serving-api 18000:8000
-curl http://127.0.0.1:18000/predict/stats
+curl http://127.0.0.1:18000/health
 ```
 
-### Option B: Docker Compose (local dev)
+### 2) Local development path
 
 ```bash
-# 1. Start infrastructure
+# Start infra stack
 ./infra/docker/run.sh up
 
-# 2. Start serving API
+# Start backend
 cd serving_pipeline
 conda activate propensity_mlops
 uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
-### Option C: One-command K8s tunnel helper
-
-Use the helper script to manage both `kubectl port-forward` and `cloudflared` in one command:
-
 ```bash
-chmod +x scripts/k8s-tunnel.sh
-scripts/k8s-tunnel.sh start
-scripts/k8s-tunnel.sh status
-scripts/k8s-tunnel.sh logs
-scripts/k8s-tunnel.sh stop
+# Start frontend
+cd serving_pipeline/react-ui
+npm install
+npm run dev
 ```
 
-The script prints the active `trycloudflare.com` URL and checks both local/public `/health` endpoints.
+Frontend default URL: `http://localhost:5173`
 
----
+## API Reference
 
-## 🔌 API Endpoints
+Base URL examples:
 
-All endpoints work on port `18000` (KinD K8s) or `8000` (local Docker).
+- K8s port-forward: `http://127.0.0.1:18000`
+- Local backend: `http://127.0.0.1:8000`
+
+### Health and stats
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/predict/stats` | Model health, source (mlflow_registry), run_id |
-| `POST` | `/predict/raw-lite?explain_level=full` | Prediction with SHAP feature contributions |
-| `POST` | `/predict/feast` | Full feature set prediction |
-| `GET` | `/model/info` | Model metadata |
-| `GET` | `/health` | API health check |
+|---|---|---|
+| `GET` | `/health` | Service health check |
+| `GET` | `/predict/stats` | Prediction service stats |
+| `GET` | `/predict/monitoring/fallback-ratio` | Feature fallback monitoring |
 
-### Example: raw-lite prediction
+### Prediction endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/predict/raw` | Full feature payload prediction |
+| `POST` | `/predict/raw-lite` | Minimal payload prediction with preprocessing |
+| `POST` | `/predict/raw/batch` | Batch prediction with JSON list |
+| `POST` | `/predict/raw/batch/upload` | Batch prediction from CSV upload |
+| `POST` | `/predict/feast` | Prediction using online feature lookup |
+
+### Model and dataset endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/model/overview` | Model metadata and serving summary |
+| `GET` | `/model/architecture` | Model architecture details |
+| `GET` | `/model/hyperparameters` | Training hyperparameters |
+| `GET` | `/model/lineage` | Registry/model lineage |
+| `GET` | `/dataset/profile` | Dataset profile summary |
+| `GET` | `/dataset/quality` | Data quality metrics |
+| `GET` | `/dataset/conversion` | Conversion-related dataset metrics |
+
+### Example request (raw-lite)
 
 ```bash
-curl -X POST http://127.0.0.1:18000/predict/raw-lite \
+curl -X POST "http://127.0.0.1:18000/predict/raw-lite?explain_level=full" \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "10001",
@@ -213,172 +167,75 @@ curl -X POST http://127.0.0.1:18000/predict/raw-lite \
   }'
 ```
 
-Response:
-```json
-{
-  "is_purchased": 1,
-  "probability": 0.6481,
-  "decision_threshold": 0.525,
-  "model_used": "xgboost",
-  "feature_quality": {"score": 39.0, "grade": "D", "inferred_count": 12},
-  "feature_contributions": [
-    {"feature": "user_cart_to_purchase_rate", "contribution": 0.42645},
-    {"feature": "user_total_purchases", "contribution": 0.31382},
-    {"feature": "activity_count", "contribution": 0.208}
-  ],
-  "explainability": {
-    "method": "tree_contrib",
-    "baseline_score": -0.045,
-    "top_signals": [
-      {"feature": "user_cart_to_purchase_rate", "contribution": 0.42645},
-      {"feature": "user_total_purchases", "contribution": 0.31382},
-      {"feature": "activity_count", "contribution": 0.208}
-    ]
-  }
-}
+## Model and Explainability
 
----
-## 🧠 SHAP Feature Contributions
+- Champion model: XGBoost (registry-served)
+- Operating threshold: `0.525` (configurable)
+- Explainability: tree SHAP contributions via XGBoost `pred_contribs=True`
+- Response can include top signals (`explain_level=top`) or full contributions (`explain_level=full`)
 
-The serving API computes **XGBoost tree SHAP** contributions for every prediction, enabling model explainability.
+Reported benchmark snapshot:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `feature_contributions` | `array` | All 26 features with per-feature SHAP contributions |
-| `explainability.method` | `string` | Always `tree_contrib` |
-| `explainability.baseline_score` | `float` | Model bias term (intercept) |
-| `explainability.top_signals` | `array` | Top 3 features by absolute contribution magnitude |
-| `explainability.notes` | `array` | Optional debug/inference notes (empty by default) |
-| `explainability.baseline_score` | `float` | Model bias term (intercept) |
-| `explainability.top_signals` | `array` | Top 3 features by absolute contribution magnitude |
-| `explainability.method` | `string` | Always `tree_contrib` |
+| Model | AUC | F1 @ 0.525 |
+|---|---:|---:|
+| XGBoost | 0.9312 | 0.7381 |
 
-**Key implementation details:**
-- Uses `booster.predict(dmat, pred_contribs=True)` via `xgb.DMatrix` — raw numpy arrays cause TypeError
-- Extracts contributions from `_MLflowPyFuncWrapper.get_booster()` — raw Booster lacks this method
-- Pads missing feature columns with `0.0` when model was trained on a subset of 26 features
-- Query param `explain_level=full` returns all 26 contributions; default `explain_level=top` returns only top 3 signals
+## Operations and Helper Scripts
 
-## 📁 Project Structure
-
-```
-├── data_pipeline/               # Feature engineering
-│   └── propensity_feature_store/  # Parquet-based feature lookup
-│
-├── model_pipeline/              # Training & evaluation
-│   ├── src/
-│   │   ├── model/              # XGBoost trainer, TabICL wrapper
-│   │   ├── data/               # Feature processing
-│   │   ├── scripts/            # train.py, register_model.py, benchmark.py
-│   │   └── config/             # XGBoost, TabICL, K8s configs
-│   └── notebook/
-│       └── tabicl_vs_xgboost_experiment.ipynb
-│
-├── serving_pipeline/            # FastAPI serving + React UI
-│   ├── api/
-│   │   └── routers/
-│   │       ├── predict.py       # Prediction endpoints (MLflow-loaded model)
-│   │       └── model.py         # Model info endpoint
-│   ├── models/                  # Parquet feature files
-│   ├── react-ui/                # React 19 + Vite 7.3.1 + Playwright
-│   └── requirements.txt
-│
-├── infra/
-│   ├── docker/                  # Docker Compose (MLflow, MinIO, Kafka, Airflow)
-│   │   └── run.sh
-│   └── k8s/                    # KinD Kubernetes manifests
-│       ├── deploy.sh            # Deploy all MLOps infra
-│       ├── teardown.sh
-│       ├── serving/             # FastAPI serving deployment (v9)
-│       ├── mlflow/              # MLflow + PostgreSQL + MinIO
-│       ├── airflow/             # Airflow + DAGs + K8sExecutor
-│       ├── kafka/               # 3-node Kafka cluster (KRaft)
-│       ├── minio/               # MinIO S3 storage
-│       ├── postgres/            # PostgreSQL (MLflow + Airflow backends)
-│       └── dashboard/          # Kubernetes Dashboard
-│
-├── Dockerfile.serving           # Multi-stage build for serving API image
-└── requirements.txt             # Top-level Python dependencies
-```
-
----
-
-## 🧪 Model Performance
-
-| Model | AUC | F1@0.525 | Threshold | Notes |
-|-------|-----|----------|-----------|-------|
-| **XGBoost v8** | 0.9312 | 0.7381 | 0.525 | Champion — loaded from MLflow registry |
-| TabICL v2.0.3 | — | — | — | Experimental comparison in notebook |
-
-**Serving API loads model from**: `models:/purchase_propensity_model@staging` (run_id: `ae1f94061e684639b5abce84cde2654c`)
-
----
-
-## 🧰 Infrastructure Ports
-
-| Service | KinD K8s | Docker Compose | Purpose |
-|---------|----------|---------------|---------|
-| MLflow UI | `kubectl port-forward svc/mlflow -n mlops 5000:5000` | `localhost:5000` | Experiment tracking |
-| MinIO Console | `kubectl port-forward svc/minio -n mlops 9001:9001` | `localhost:9001` | Artifact storage |
-| MinIO API | `kubectl port-forward svc/minio -n mlops 9000:9000` | `localhost:9000` | S3 endpoint |
-| Airflow | `kubectl port-forward svc/airflow-webserver -n mlops 8080:8080` | `localhost:8090` | DAG orchestration |
-| Kafka UI | `kubectl port-forward svc/kafka-ui -n mlops 8080:8080` | — | Kafka management |
-| Serving API | `kubectl port-forward -n mlops svc/serving-api 18000:8000` | `localhost:8000` | Prediction service |
-| React UI | `npm run dev` (port 5173) | same | Frontend |
-
-**Credentials (KinD K8s):** MinIO `minio/minio123` | Airflow `admin/admin123`
-
----
-
-## ⚙️ Configuration
-
-### Environment variables for serving API
+### K8s tunnel helper
 
 ```bash
-MLFLOW_TRACKING_URI=http://mlflow.mlops.svc.cluster.local:5000   # KinD
-AWS_ACCESS_KEY_ID=minio
-AWS_SECRET_ACCESS_KEY=minio123
-MLFLOW_S3_ENDPOINT_URL=http://minio.mlops.svc.cluster.local:9000
-MLFLOW_MODEL_NAME=purchase_propensity_model
-MLFLOW_MODEL_ALIAS=staging
-PREDICT_THRESHOLD=0.525
-GEMINI_API_KEY=...                                              # optional
+chmod +x scripts/k8s-tunnel.sh
+scripts/k8s-tunnel.sh start
+scripts/k8s-tunnel.sh status
+scripts/k8s-tunnel.sh logs
+scripts/k8s-tunnel.sh stop
 ```
 
----
-
-## 🧪 Testing
+Optional Vercel env sync:
 
 ```bash
-# Serving API health
-curl http://127.0.0.1:18000/predict/stats
-
-# Unit tests
-cd model_pipeline && pytest src/test/
-
-# E2E tests (React UI)
-cd serving_pipeline/react-ui && npx playwright test
+AUTO_UPDATE_VERCEL=true VERCEL_TARGET_ENVS=production,development scripts/k8s-tunnel.sh restart
+VERCEL_TARGET_ENVS=production,development scripts/k8s-tunnel.sh sync-vercel
 ```
 
----
-
-## 📝 Airflow DAGs
-
-| DAG | Description |
-|-----|-------------|
-| `cart_to_purchase_e2e` | Full pipeline: train → register → serve |
-| `cart_to_purchase_k8s` | K8sExecutor: train_xgboost → register_model → set_alias |
-| `ctp_e2e_tabicl_dag` | TabICL experimental pipeline |
-
-DAGs are mounted via `airflow-dags-pvc` (1Gi) and synced via `sync-repo-job`.
-
----
-
-## 🔑 Optional: Gemini Chatbot
-
-The React UI includes a chatbot powered by Gemini.
+### Backup and restore (K8s)
 
 ```bash
-export GEMINI_API_KEY="your_key_here"
-export GEMINI_MODEL="gemini-2.5-flash"   # optional
+./infra/k8s/backup.sh
+./infra/k8s/restore.sh
 ```
+
+## Testing and Validation
+
+```bash
+# Model pipeline tests
+cd model_pipeline
+pytest src/test/
+
+# Frontend checks
+cd serving_pipeline/react-ui
+npm run lint
+npm run build
+
+# Frontend E2E (if Playwright browsers are installed)
+npx playwright test
+```
+
+## Troubleshooting
+
+- `kubectl port-forward` fails:
+  - Verify service exists: `kubectl get svc -n mlops`
+  - Verify pods are healthy: `kubectl get pods -n mlops`
+- MLflow/MinIO issues:
+  - Check env vars: `MLFLOW_TRACKING_URI`, `MLFLOW_S3_ENDPOINT_URL`, `AWS_*`
+- Frontend cannot call backend:
+  - Confirm API base URL in UI settings
+  - Check CORS origins in `serving_pipeline/api/main.py`
+- KinD data disappears after Docker restart:
+  - Expected with local-path storage unless persisted externally
+
+## Acknowledgments
+
+- Kaggle dataset by Open CDP project contributors
+- MLflow, Airflow, FastAPI, XGBoost, React, and Kubernetes communities
