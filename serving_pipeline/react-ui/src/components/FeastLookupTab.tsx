@@ -319,7 +319,7 @@ export const FeastLookupTab = () => {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="type-heading text-sm font-semibold">Ready to run Feast lookup prediction</p>
-                  <p className="readable-helper">Shortcut: Ctrl+Enter | Enter entity IDs or load one of the known sample pairs above.</p>
+                  <p className="readable-helper">Shortcut: Ctrl+Enter</p>
                   <p className="type-caption" aria-live="polite">{draftSavedLabel}</p>
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
