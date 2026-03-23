@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, FileText, X, Download, Files, TrendingUp, TrendingDown, Target, Zap } from 'lucide-react'
+import { Upload, FileText, X, Download, Files, TrendingUp, TrendingDown, Target, Zap, Activity, Gauge, Sparkles } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError, type ExplainLevel } from '@/lib/api'
@@ -643,7 +643,7 @@ export const BatchCsvTab = () => {
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
               <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-1">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="type-kicker">Decision console</p>
+                  <p className="type-kicker inline-flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" />Decision console</p>
                   <span className="type-caption inline-flex rounded-full px-2 py-0.5 font-semibold state-badge-info">
                     {simulatorThreshold !== null ? `Threshold ${simulatorThreshold.toFixed(3)}` : 'Default thresholds'}
                   </span>
@@ -651,10 +651,22 @@ export const BatchCsvTab = () => {
                 <p className="type-body text-sm text-text-primary">
                   Threshold changes are synced across summary, charts, and table.
                 </p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 rounded-lg border border-border/70 bg-background/50 p-2.5">
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="type-caption text-muted-foreground">Probability vs threshold</p>
+                    <span className="type-caption inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
+                      <Gauge className="h-3 w-3" />
+                      {formatPercent(summary.averageProbability)}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted/55" aria-hidden="true">
+                    <div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 transition-[width] duration-700" style={{ width: `${Math.min(100, Math.max(0, summary.averageProbability * 100))}%` }} />
+                  </div>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   <div className="flex min-h-[96px] flex-col justify-between rounded-lg border border-border/70 bg-background/50 p-2.5">
                     <p className="type-caption min-h-[2.75rem] text-muted-foreground">Flip count</p>
-                    <p className="type-metric text-xl font-semibold leading-none tracking-tight text-foreground">{formatCount(simulatorFlipCount)}</p>
+                    <p className={cn('type-metric text-xl font-semibold leading-none tracking-tight', simulatorFlipCount > 0 ? 'state-text-warning' : 'state-text-success')}>{formatCount(simulatorFlipCount)}</p>
                   </div>
                   <div className="flex min-h-[96px] flex-col justify-between rounded-lg border border-border/70 bg-background/50 p-2.5">
                     <p className="type-caption min-h-[2.75rem] text-muted-foreground">Avg probability</p>
@@ -664,30 +676,40 @@ export const BatchCsvTab = () => {
               </div>
 
               <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5 xl:col-span-2">
-                <p className="type-kicker mb-2"><ScrollText effect="fadeIn">Action segmentation</ScrollText></p>
+                <p className="type-kicker mb-2 inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /><ScrollText effect="fadeIn">Action segmentation</ScrollText></p>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                   {[
-                    { key: 'likely_to_drop', label: 'Likely to drop', rows: actionSegments.likelyToDrop, tone: 'state-text-error' },
-                    { key: 'high_value_hesitant', label: 'High-value hesitant', rows: actionSegments.highValueHesitant, tone: 'state-text-warning' },
-                    { key: 'confident_converters', label: 'Confident converters', rows: actionSegments.confidentConverters, tone: 'state-text-success' },
-                    { key: 'low_confidence_unknowns', label: 'Low-confidence unknowns', rows: actionSegments.lowConfidenceUnknowns, tone: 'state-text-info' },
-                  ].map((segment) => (
-                    <div key={segment.key} className="flex h-full flex-col rounded-lg border border-border/70 bg-background/45 p-3">
-                      <p className="type-caption min-h-[4.5rem] text-muted-foreground">{segment.label}</p>
-                      <p className={cn('type-metric mt-1 text-2xl font-semibold tracking-tight', segment.tone)}>{formatCount(segment.rows.length)}</p>
-                      <Magnetic intensity={0.1} range={44}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="micro-interactive mt-auto h-8 w-full border-border/70 px-2.5"
-                          onClick={() => exportSegmentCsv(segment.key, segment.rows)}
-                          disabled={segment.rows.length === 0}
-                        >
-                          Export
-                        </Button>
-                      </Magnetic>
-                    </div>
-                  ))}
+                    { key: 'likely_to_drop', label: 'Likely to drop', rows: actionSegments.likelyToDrop, tone: 'state-text-error', bar: 'bg-gradient-to-r from-rose-400 to-rose-500', chip: 'state-badge-error' },
+                    { key: 'high_value_hesitant', label: 'High-value hesitant', rows: actionSegments.highValueHesitant, tone: 'state-text-warning', bar: 'bg-gradient-to-r from-amber-400 to-orange-500', chip: 'state-badge-warning' },
+                    { key: 'confident_converters', label: 'Confident converters', rows: actionSegments.confidentConverters, tone: 'state-text-success', bar: 'bg-gradient-to-r from-emerald-400 to-green-500', chip: 'state-badge-success' },
+                    { key: 'low_confidence_unknowns', label: 'Low-confidence unknowns', rows: actionSegments.lowConfidenceUnknowns, tone: 'state-text-info', bar: 'bg-gradient-to-r from-cyan-400 to-blue-500', chip: 'state-badge-info' },
+                  ].map((segment) => {
+                    const ratio = summary.total > 0 ? (segment.rows.length / summary.total) * 100 : 0
+
+                    return (
+                      <div key={segment.key} className="flex h-full flex-col rounded-lg border border-border/70 bg-background/45 p-3 transition-colors hover:border-border/90 hover:bg-background/55">
+                        <div className="mb-1 flex items-start justify-between gap-2">
+                          <p className="type-caption min-h-[4.5rem] text-muted-foreground">{segment.label}</p>
+                          <span className={cn('type-caption inline-flex rounded-full px-2 py-0.5 font-semibold', segment.chip)}>{ratio.toFixed(1)}%</span>
+                        </div>
+                        <p className={cn('type-metric mt-1 text-2xl font-semibold tracking-tight', segment.tone)}>{formatCount(segment.rows.length)}</p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/55" aria-hidden="true">
+                          <div className={cn('h-full transition-[width] duration-700', segment.bar)} style={{ width: `${ratio}%` }} />
+                        </div>
+                        <Magnetic intensity={0.1} range={44}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="micro-interactive mt-auto h-8 w-full border-border/70 px-2.5"
+                            onClick={() => exportSegmentCsv(segment.key, segment.rows)}
+                            disabled={segment.rows.length === 0}
+                          >
+                            Export
+                          </Button>
+                        </Magnetic>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
