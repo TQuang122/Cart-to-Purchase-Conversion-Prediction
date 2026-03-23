@@ -5,7 +5,7 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon-c2p\.svg|robots\.txt|sitemap\.xml).*)",
+      "source": "/((?!assets/|favicon-c2p\\.svg|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ]
