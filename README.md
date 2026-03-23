@@ -160,6 +160,20 @@ conda activate propensity_mlops
 uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
+### Option C: One-command K8s tunnel helper
+
+Use the helper script to manage both `kubectl port-forward` and `cloudflared` in one command:
+
+```bash
+chmod +x scripts/k8s-tunnel.sh
+scripts/k8s-tunnel.sh start
+scripts/k8s-tunnel.sh status
+scripts/k8s-tunnel.sh logs
+scripts/k8s-tunnel.sh stop
+```
+
+The script prints the active `trycloudflare.com` URL and checks both local/public `/health` endpoints.
+
 ---
 
 ## 🔌 API Endpoints
