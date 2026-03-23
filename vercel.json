@@ -3,5 +3,10 @@
   "outputDirectory": "serving_pipeline/react-ui/dist",
   "installCommand": "cd serving_pipeline/react-ui && npm install",
   "framework": null,
-  "rewrites": []
+  "rewrites": [
+    {
+      "source": "/((?!assets/|favicon-c2p\.svg|robots\.txt|sitemap\.xml).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
