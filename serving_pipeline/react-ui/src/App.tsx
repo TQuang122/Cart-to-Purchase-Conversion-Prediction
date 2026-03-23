@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
 
@@ -20,6 +20,12 @@ import { formatServingModelLabel } from '@/lib/api'
 type TabValue = 'raw' | 'batch' | 'feast'
 const TAB_QUERY_KEY = 'tab'
 
+const TAB_PATHS: Record<TabValue, string> = {
+  raw: '/raw',
+  batch: '/batch',
+  feast: '/feast',
+}
+
 interface TabConfig {
   id: TabValue
   label: string
@@ -35,7 +41,12 @@ const tabs: TabConfig[] = [
 
 const isTabValue = (value: string): value is TabValue => value === 'raw' || value === 'batch' || value === 'feast'
 
-const getTabFromSearch = (search: string): TabValue => {
+const getTabFromLocation = (pathname: string, search: string): TabValue => {
+  const normalizedPath = pathname.toLowerCase()
+  if (normalizedPath === '/raw') return 'raw'
+  if (normalizedPath === '/batch') return 'batch'
+  if (normalizedPath === '/feast') return 'feast'
+
   const queryTab = new URLSearchParams(search).get(TAB_QUERY_KEY)
   if (queryTab && isTabValue(queryTab)) return queryTab
   return 'raw'
@@ -57,16 +68,13 @@ const NeuralCartMark = ({ variant = 'halo' }: { variant?: 'ink' | 'halo' }) => {
 }
 
 function App() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
   const { state, dispatch } = useAppContext()
   const INTRO_SEEN_KEY = 'c2p_intro_seen_v1'
   const CALM_MODE_KEY = 'c2p_calm_mode_v1'
-  const TAB_EXIT_MS = 170
-  const TAB_ENTER_MS = 260
-
-  const [activeTab, setActiveTab] = useState<TabValue>(() => typeof window === 'undefined' ? 'raw' : getTabFromSearch(window.location.search))
-  const [visibleTab, setVisibleTab] = useState<TabValue>(() => typeof window === 'undefined' ? 'raw' : getTabFromSearch(window.location.search))
-  const [tabStage, setTabStage] = useState<'idle' | 'exiting' | 'entering'>('idle')
-  const [reduceMotion, setReduceMotion] = useState(false)
+  const activeTab = getTabFromLocation(location.pathname, location.search)
   const [isIntroOpen, setIsIntroOpen] = useState(() => {
     if (typeof window === 'undefined') return false
     if (navigator.webdriver) return false
@@ -89,19 +97,9 @@ function App() {
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 1024px)').matches
   })
-  const exitTimerRef = useRef<number | null>(null)
-  const enterTimerRef = useRef<number | null>(null)
   const [, setStats] = useState<StatsData | null>(null)
 
   const handleStatsUpdate = (newStats: StatsData) => setStats(newStats)
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handle = () => setReduceMotion(media.matches)
-    handle()
-    media.addEventListener('change', handle)
-    return () => media.removeEventListener('change', handle)
-  }, [])
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)')
@@ -109,13 +107,6 @@ function App() {
     handle()
     media.addEventListener('change', handle)
     return () => media.removeEventListener('change', handle)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (exitTimerRef.current) window.clearTimeout(exitTimerRef.current)
-      if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current)
-    }
   }, [])
 
   useEffect(() => {
@@ -129,32 +120,22 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const syncFromUrl = () => {
-      const next = getTabFromSearch(window.location.search)
-      setActiveTab(next)
-      setVisibleTab(next)
-      setTabStage('idle')
+    const params = new URLSearchParams(location.search)
+    const queryTab = params.get(TAB_QUERY_KEY)
+
+    if (location.pathname === '/' && queryTab && isTabValue(queryTab)) {
+      params.delete(TAB_QUERY_KEY)
+      const nextSearch = params.toString()
+      const nextPath = TAB_PATHS[queryTab]
+      navigate(nextSearch ? `${nextPath}?${nextSearch}` : nextPath, { replace: true })
+      return
     }
-    window.addEventListener('popstate', syncFromUrl)
-    return () => window.removeEventListener('popstate', syncFromUrl)
-  }, [])
+
+  }, [location.pathname, location.search, navigate])
 
   const handleTabChange = (nextTab: TabValue) => {
     if (nextTab === activeTab) return
-    if (exitTimerRef.current) window.clearTimeout(exitTimerRef.current)
-    if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current)
-    setTabStage('exiting')
-    const exitDelay = reduceMotion ? 10 : TAB_EXIT_MS
-    exitTimerRef.current = window.setTimeout(() => {
-      setActiveTab(nextTab)
-      setVisibleTab(nextTab)
-      setTabStage('entering')
-      const enterDelay = reduceMotion ? 10 : TAB_ENTER_MS
-      enterTimerRef.current = window.setTimeout(() => setTabStage('idle'), enterDelay)
-      const url = new URL(window.location.href)
-      url.searchParams.set(TAB_QUERY_KEY, nextTab)
-      window.history.replaceState({}, '', url.toString())
-    }, exitDelay)
+    navigate(TAB_PATHS[nextTab], { replace: true })
   }
 
   const handleTabKeyDown = (e: React.KeyboardEvent<HTMLElement>, idx: number) => {
@@ -180,118 +161,125 @@ function App() {
     </div>
   )
 
-  return (
-      <Routes>
-        <Route path="/" element={<>
-          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
-          <Toaster position="top-right" richColors />
-          <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
-        <main id="main-content" tabIndex={-1} className="relative min-h-screen">
-          <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
-            <section className="dashboard-shell dashboard-card-scale-lg section-reveal section-delay-1 panel-accent px-3 py-3 sm:px-4">
-              <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
-                <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
-                  <NeuralCartMark variant="halo" />
-                  <span className="hero-reveal">Cart-to-Purchase</span>
-                  <MorphingText
-                    words={['Workspace', 'Studio', 'Dashboard', 'Predictor']} 
-                    className="hero-gradient-text hero-reveal"
-                    interval={2000}
-                    animationDuration={0.45}
-                  />
-                </h1>
-                <div className="flex items-center gap-2">
-                  <Magnetic intensity={0.4} range={80}>
-                    <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
-                      <Link to="/dataset" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
-                        Dataset Explorer
-                      </Link>
-                    </RainbowButton>
-                  </Magnetic>
-                  <Magnetic intensity={0.12} range={46}>
-                    <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="micro-interactive inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
-                      {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-                      <span>{isSideRailOpen ? 'Hide' : 'Open'} rail</span>
-                    </button>
-                  </Magnetic>
-                </div>
+  const workspaceElement = (
+    <>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
+      <Toaster position="top-right" richColors />
+      <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
+      <main id="main-content" tabIndex={-1} className="relative min-h-screen">
+        <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
+          <section className="dashboard-shell dashboard-card-scale-lg section-reveal section-delay-1 panel-accent px-3 py-3 sm:px-4">
+            <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
+              <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
+                <NeuralCartMark variant="halo" />
+                <span className="hero-reveal">Cart-to-Purchase</span>
+                <MorphingText
+                  words={['Workspace', 'Studio', 'Dashboard', 'Predictor']}
+                  className="hero-gradient-text hero-reveal"
+                  interval={2000}
+                  animationDuration={0.45}
+                />
+              </h1>
+              <div className="flex items-center gap-2">
+                <Magnetic intensity={0.4} range={80}>
+                  <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
+                    <Link to="/dataset" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
+                      Dataset Explorer
+                    </Link>
+                  </RainbowButton>
+                </Magnetic>
+                <Magnetic intensity={0.12} range={46}>
+                  <button type="button" onClick={() => setIsSideRailOpen(p => !p)} className="micro-interactive inline-flex items-center gap-2 rounded-lg border border-border/80 bg-surface-2/92 px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary" aria-expanded={isSideRailOpen}>
+                    {isSideRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+                    <span>{isSideRailOpen ? 'Hide' : 'Open'} rail</span>
+                  </button>
+                </Magnetic>
               </div>
-              <DashboardHeader apiBaseUrl={state.apiBaseUrl} layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
-            </section>
-            <section className="mt-6 dashboard-shell dashboard-card-scale-md section-reveal section-delay-3 panel-accent p-3 sm:p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg">
-                  <Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" />
-                  <ScrollText effect="fadeIn" className="inline-flex items-center">
-                    <span>Prediction studio</span>
-                  </ScrollText>
-                </h2>
-                <p className="tone-chip type-kicker px-2.5 py-1">Action-first</p>
-              </div>
-              <div className="state-banner state-banner-ready mb-4" role="status">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                <div><p className="type-heading text-sm font-semibold">Workspace ready</p><p className="type-caption mt-0.5 opacity-90">Pick a method, then run prediction.</p></div>
-              </div>
-              <div className={`grid grid-cols-1 gap-4 ${isSideRailOpen ? 'lg:grid-cols-[252px_minmax(0,1fr)_292px]' : 'lg:grid-cols-[252px_minmax(0,1fr)]'}`}>
-                <nav className="dashboard-card-scale-sm rounded-2xl border border-border/80 bg-surface-2/90 p-2" aria-label="Prediction methods">
-                  <div className="flex flex-col gap-2" role="tablist">
-                    {tabs.map((tab) => (
-                      <button key={tab.id} type="button" onClick={() => handleTabChange(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, tabs.findIndex(t => t.id === tab.id))} role="tab" aria-selected={activeTab === tab.id} className={`group relative w-full overflow-hidden rounded-xl border px-3 py-3 text-left transition-all hover:-translate-y-0.5 ${activeTab === tab.id ? 'interactive-border bg-[hsl(var(--interactive)/0.12)]' : 'border-border/76 bg-surface-2/96 hover:border-[hsl(var(--interactive)/0.48)]'}`}>
-                        <div className={`absolute left-0 top-0 h-full w-1 ${activeTab === tab.id ? 'bg-[hsl(var(--interactive-hover))]' : 'opacity-0 group-hover:opacity-60'}`} />
-                        <div className="flex items-start gap-3">
-                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${activeTab === tab.id ? 'border-[hsl(var(--interactive)/0.45)] bg-[hsl(var(--interactive)/0.25)] text-[hsl(var(--success-contrast))]' : 'border-border/78 bg-surface-2 text-text-secondary group-hover:border-[hsl(var(--interactive)/0.42)]'}`}>{tab.icon}</div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between"><span className="type-heading text-sm font-semibold text-text-primary">{tab.label}</span><ChevronRight className={`h-3.5 w-3.5 ${activeTab === tab.id ? 'translate-x-0 text-[hsl(var(--interactive-hover))]' : '-translate-x-1 opacity-25 group-hover:translate-x-0'}`} /></div>
-                            <p className="type-caption mt-1 line-clamp-2 text-text-secondary">{tab.description}</p>
-                          </div>
+            </div>
+            <DashboardHeader apiBaseUrl={state.apiBaseUrl} layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
+          </section>
+          <section className="mt-6 dashboard-shell dashboard-card-scale-md section-reveal section-delay-3 panel-accent p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg">
+                <Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" />
+                <ScrollText effect="fadeIn" className="inline-flex items-center">
+                  <span>Prediction studio</span>
+                </ScrollText>
+              </h2>
+              <p className="tone-chip type-kicker px-2.5 py-1">Action-first</p>
+            </div>
+            <div className="state-banner state-banner-ready mb-4" role="status">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div><p className="type-heading text-sm font-semibold">Workspace ready</p><p className="type-caption mt-0.5 opacity-90">Pick a method, then run prediction.</p></div>
+            </div>
+            <div className={`grid grid-cols-1 gap-4 ${isSideRailOpen ? 'lg:grid-cols-[252px_minmax(0,1fr)_292px]' : 'lg:grid-cols-[252px_minmax(0,1fr)]'}`}>
+              <nav className="dashboard-card-scale-sm rounded-2xl border border-border/80 bg-surface-2/90 p-2" aria-label="Prediction methods">
+                <div className="flex flex-col gap-2" role="tablist">
+                  {tabs.map((tab) => (
+                    <button key={tab.id} type="button" onClick={() => handleTabChange(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, tabs.findIndex(t => t.id === tab.id))} role="tab" aria-selected={activeTab === tab.id} className={`group relative w-full overflow-hidden rounded-xl border px-3 py-3 text-left transition-all hover:-translate-y-0.5 ${activeTab === tab.id ? 'interactive-border bg-[hsl(var(--interactive)/0.12)]' : 'border-border/76 bg-surface-2/96 hover:border-[hsl(var(--interactive)/0.48)]'}`}>
+                      <div className={`absolute left-0 top-0 h-full w-1 ${activeTab === tab.id ? 'bg-[hsl(var(--interactive-hover))]' : 'opacity-0 group-hover:opacity-60'}`} />
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${activeTab === tab.id ? 'border-[hsl(var(--interactive)/0.45)] bg-[hsl(var(--interactive)/0.25)] text-[hsl(var(--success-contrast))]' : 'border-border/78 bg-surface-2 text-text-secondary group-hover:border-[hsl(var(--interactive)/0.42)]'}`}>{tab.icon}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between"><span className="type-heading text-sm font-semibold text-text-primary">{tab.label}</span><ChevronRight className={`h-3.5 w-3.5 ${activeTab === tab.id ? 'translate-x-0 text-[hsl(var(--interactive-hover))]' : '-translate-x-1 opacity-25 group-hover:translate-x-0'}`} /></div>
+                          <p className="type-caption mt-1 line-clamp-2 text-text-secondary">{tab.description}</p>
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                </nav>
-                <div>
-                  <div className="focus-panel-content">
-                    <div role="tabpanel" className={tabStage === 'exiting' ? 'tab-panel tab-panel-exit' : tabStage === 'entering' ? 'tab-panel tab-panel-enter' : 'tab-panel'}>
-                      <Suspense fallback={<Card><CardHeader><CardTitle>Loading...</CardTitle></CardHeader><CardContent><div className="h-40 animate-pulse rounded-xl bg-surface-2/70" /></CardContent></Card>}>
-                        {visibleTab === 'raw' && <RawFeaturesTab autoApplyPresetId={autoPresetId} autoApplyPresetToken={autoPresetToken} />}
-                        {visibleTab === 'batch' && <BatchCsvTab />}
-                        {visibleTab === 'feast' && <FeastLookupTab />}
-                      </Suspense>
-                    </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </nav>
+              <div>
+                <div className="focus-panel-content">
+                  <div role="tabpanel" className="tab-panel">
+                    <Suspense fallback={<Card><CardHeader><CardTitle>Loading...</CardTitle></CardHeader><CardContent><div className="h-40 animate-pulse rounded-xl bg-surface-2/70" /></CardContent></Card>}>
+                      {activeTab === 'raw' && <RawFeaturesTab autoApplyPresetId={autoPresetId} autoApplyPresetToken={autoPresetToken} />}
+                      {activeTab === 'batch' && <BatchCsvTab />}
+                      {activeTab === 'feast' && <FeastLookupTab />}
+                    </Suspense>
                   </div>
                 </div>
-                {isSideRailOpen ? (
-                  <>
-                    {!isDesktop ? (
-                      <Sheet open={isSideRailOpen} onOpenChange={setIsSideRailOpen}>
-                        <SheetContent side="right" className="w-[min(92vw,360px)] border-border/80 bg-surface-1 lg:hidden">
-                          <SheetHeader>
-                            <SheetTitle>Context and controls</SheetTitle>
-                            <SheetDescription>Quick model context and action shortcuts.</SheetDescription>
-                          </SheetHeader>
-                          <div className="mt-4">{sideRailContent}</div>
-                        </SheetContent>
-                      </Sheet>
-                    ) : null}
-                    {isDesktop ? <aside className="hidden space-y-3 lg:block">{sideRailContent}</aside> : null}
-                  </>
-                ) : null}
               </div>
-            </section>
-            <footer className="mt-12 border-t border-border/50 py-6">
-              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="type-body text-sm">Cart-to-Purchase Prediction System</p>
-                <div className="type-caption flex items-center gap-4 text-text-secondary"><span className="flex items-center gap-1"><span className="state-fill-success h-1.5 w-1.5 rounded-full animate-pulse" />Operational</span><span>v1.1.0</span></div>
-              </div>
-              <div className="mt-4">
-                <FeedbackWidget label="Was this prediction helpful?" placeholder="Share your feedback about the prediction result..." />
-              </div>
-            </footer>
-          </div>
-        </main>
-        <ProjectIntroOverlay key={introSessionKey} open={isIntroOpen} onClose={handleCloseIntro} onUsePreset={handleUseStarterPreset} />
-        <ChatbotWidget />
-      </>} />
+              {isSideRailOpen ? (
+                <>
+                  {!isDesktop ? (
+                    <Sheet open={isSideRailOpen} onOpenChange={setIsSideRailOpen}>
+                      <SheetContent side="right" className="w-[min(92vw,360px)] border-border/80 bg-surface-1 lg:hidden">
+                        <SheetHeader>
+                          <SheetTitle>Context and controls</SheetTitle>
+                          <SheetDescription>Quick model context and action shortcuts.</SheetDescription>
+                        </SheetHeader>
+                        <div className="mt-4">{sideRailContent}</div>
+                      </SheetContent>
+                    </Sheet>
+                  ) : null}
+                  {isDesktop ? <aside className="hidden space-y-3 lg:block">{sideRailContent}</aside> : null}
+                </>
+              ) : null}
+            </div>
+          </section>
+          <footer className="mt-12 border-t border-border/50 py-6">
+            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+              <p className="type-body text-sm">Cart-to-Purchase Prediction System</p>
+              <div className="type-caption flex items-center gap-4 text-text-secondary"><span className="flex items-center gap-1"><span className="state-fill-success h-1.5 w-1.5 rounded-full animate-pulse" />Operational</span><span>v1.1.0</span></div>
+            </div>
+            <div className="mt-4">
+              <FeedbackWidget label="Was this prediction helpful?" placeholder="Share your feedback about the prediction result..." />
+            </div>
+          </footer>
+        </div>
+      </main>
+      <ProjectIntroOverlay key={introSessionKey} open={isIntroOpen} onClose={handleCloseIntro} onUsePreset={handleUseStarterPreset} />
+      <ChatbotWidget />
+    </>
+  )
+
+  return (
+    <Routes>
+      <Route path="/" element={workspaceElement} />
+      <Route path="/raw" element={workspaceElement} />
+      <Route path="/batch" element={workspaceElement} />
+      <Route path="/feast" element={workspaceElement} />
       <Route path="/dataset" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
     </Routes>
   )
