@@ -5,6 +5,7 @@
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-KinD%20Ready-326CE5.svg)](https://kubernetes.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 An end-to-end MLOps system that predicts whether a user will complete a purchase after adding an item to cart. The project covers data processing, model training, registry-based deployment, and a production-style inference UI.
 
@@ -234,6 +235,10 @@ npx playwright test
   - Check CORS origins in `serving_pipeline/api/main.py`
 - KinD data disappears after Docker restart:
   - Expected with local-path storage unless persisted externally
+
+## License
+
+This project is licensed under the Apache License 2.0. See `LICENSE`.
 
 ## Acknowledgments
 
