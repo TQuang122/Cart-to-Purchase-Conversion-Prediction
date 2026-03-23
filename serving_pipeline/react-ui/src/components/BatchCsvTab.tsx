@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, FileText, X, Download, Files } from 'lucide-react'
+import { Upload, FileText, X, Download, Files, TrendingUp, TrendingDown, Target, Zap } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError, type ExplainLevel } from '@/lib/api'
@@ -30,6 +30,16 @@ const LazyBatchResultCharts = lazy(() =>
     default: module.BatchResultCharts,
   }))
 )
+
+const integerFormatter = new Intl.NumberFormat('en-US')
+const percentageFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
+
+const formatCount = (value: number) => integerFormatter.format(value)
+const formatPercent = (value: number) => `${percentageFormatter.format(value * 100)}%`
+const formatSignedCount = (value: number) => `${value >= 0 ? '+' : ''}${integerFormatter.format(value)}`
 
 type CohortMetadataRow = {
   brand: string
@@ -563,51 +573,65 @@ export const BatchCsvTab = () => {
 
         {results.length > 0 ? (
           <div ref={resultsSectionRef} className="section-reveal section-delay-3 space-y-4">
+            {/* KPI Summary Cards */}
             <div aria-live="polite" aria-atomic="false" className="grid grid-cols-1 gap-3 md:grid-cols-5">
               {[
                 {
                   key: 'total',
                   label: 'Total rows',
-                  value: String(summary.total),
+                  value: formatCount(summary.total),
                   cardClass: 'rounded-xl border border-border/80 bg-surface-2/78 p-3.5',
-                  valueClass: 'type-metric text-lg font-semibold text-text-primary',
+                  valueClass: 'type-metric text-2xl font-semibold tracking-tight text-text-primary',
                   helper: '',
+                  icon: <Files className="h-5 w-5" />,
+                  iconBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
                 },
                 {
                   key: 'purchased',
                   label: 'Predicted purchase',
-                  value: String(summary.purchased),
+                  value: formatCount(summary.purchased),
                   cardClass: 'state-surface-success rounded-xl border p-3.5',
-                  valueClass: 'type-metric state-text-success text-lg font-semibold',
+                  valueClass: 'type-metric state-text-success text-2xl font-semibold tracking-tight',
                   helper: '',
+                  icon: <TrendingUp className="h-5 w-5" />,
+                  iconBg: 'bg-green-500/15 text-green-600 dark:text-green-400',
                 },
                 {
                   key: 'nonPurchased',
                   label: 'Predicted non-purchase',
-                  value: String(summary.nonPurchased),
+                  value: formatCount(summary.nonPurchased),
                   cardClass: 'state-surface-error rounded-xl border p-3.5',
-                  valueClass: 'type-metric state-text-error text-lg font-semibold',
+                  valueClass: 'type-metric state-text-error text-2xl font-semibold tracking-tight',
                   helper: '',
+                  icon: <TrendingDown className="h-5 w-5" />,
+                  iconBg: 'bg-red-500/15 text-red-600 dark:text-red-400',
                 },
                 {
                   key: 'purchaseRate',
                   label: 'Predicted purchase rate',
-                  value: `${(summary.purchaseRate * 100).toFixed(1)}%`,
+                  value: formatPercent(summary.purchaseRate),
                   cardClass: 'state-surface-info rounded-xl border p-3.5',
-                  valueClass: 'type-metric state-text-info text-lg font-semibold',
+                  valueClass: 'type-metric state-text-info text-2xl font-semibold tracking-tight',
                   helper: '',
+                  icon: <Target className="h-5 w-5" />,
+                  iconBg: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
                 },
                 {
                   key: 'highConfidence',
                   label: 'High confidence rows',
-                  value: String(summary.highConfidence),
+                  value: formatCount(summary.highConfidence),
                   cardClass: 'state-surface-warning rounded-xl border p-3.5',
-                  valueClass: 'type-metric state-text-warning text-lg font-semibold',
+                  valueClass: 'type-metric state-text-warning text-2xl font-semibold tracking-tight',
                   helper: `At least ${Math.round(HIGH_CONFIDENCE_MARGIN * 100)} pts from threshold`,
+                  icon: <Zap className="h-5 w-5" />,
+                  iconBg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
                 },
               ].map((card) => (
                 <div key={card.key} className={cn('panel-accent flex min-h-[176px] flex-col', card.cardClass)}>
-                  <p className="type-body min-h-[5rem] text-sm font-medium text-muted-foreground">{card.label}</p>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="type-body min-h-[2rem] text-sm font-medium text-muted-foreground">{card.label}</p>
+                    <div className={cn('rounded-lg p-1.5', card.iconBg)}>{card.icon}</div>
+                  </div>
                   <p className={card.valueClass}>{card.value}</p>
                   <p className={cn('type-caption mt-auto min-h-[2.5rem]', !card.helper && 'invisible')}>
                     {card.helper || 'placeholder'}
@@ -630,11 +654,11 @@ export const BatchCsvTab = () => {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="flex min-h-[96px] flex-col justify-between rounded-lg border border-border/70 bg-background/50 p-2.5">
                     <p className="type-caption min-h-[2.75rem] text-muted-foreground">Flip count</p>
-                    <p className="type-metric text-base font-semibold leading-none text-foreground">{simulatorFlipCount}</p>
+                    <p className="type-metric text-xl font-semibold leading-none tracking-tight text-foreground">{formatCount(simulatorFlipCount)}</p>
                   </div>
                   <div className="flex min-h-[96px] flex-col justify-between rounded-lg border border-border/70 bg-background/50 p-2.5">
                     <p className="type-caption min-h-[2.75rem] text-muted-foreground">Avg probability</p>
-                    <p className="type-metric text-base font-semibold leading-none text-foreground">{(summary.averageProbability * 100).toFixed(1)}%</p>
+                    <p className="type-metric text-xl font-semibold leading-none tracking-tight text-foreground">{formatPercent(summary.averageProbability)}</p>
                   </div>
                 </div>
               </div>
@@ -650,7 +674,7 @@ export const BatchCsvTab = () => {
                   ].map((segment) => (
                     <div key={segment.key} className="flex h-full flex-col rounded-lg border border-border/70 bg-background/45 p-3">
                       <p className="type-caption min-h-[4.5rem] text-muted-foreground">{segment.label}</p>
-                      <p className={cn('type-metric mt-1 text-lg font-semibold', segment.tone)}>{segment.rows.length}</p>
+                      <p className={cn('type-metric mt-1 text-2xl font-semibold tracking-tight', segment.tone)}>{formatCount(segment.rows.length)}</p>
                       <Magnetic intensity={0.1} range={44}>
                         <Button
                           variant="outline"
@@ -671,9 +695,9 @@ export const BatchCsvTab = () => {
             <div className="panel-accent rounded-xl border border-border/80 bg-surface-2/78 p-3.5">
               <p className="type-kicker mb-2">Batch insight</p>
               <p className="type-body text-sm text-text-primary">
-                This batch predicts <span className="type-metric font-semibold state-text-success">{summary.purchased}</span> likely purchases out of{' '}
-                <span className="type-metric font-semibold">{summary.total}</span> rows ({(summary.purchaseRate * 100).toFixed(1)}%).
-                Average model confidence is <span className="type-metric font-semibold state-text-info">{(summary.averageProbability * 100).toFixed(1)}%</span>.
+                This batch predicts <span className="type-metric font-semibold state-text-success">{formatCount(summary.purchased)}</span> likely purchases out of{' '}
+                <span className="type-metric font-semibold">{formatCount(summary.total)}</span> rows ({formatPercent(summary.purchaseRate)}).
+                Average model confidence is <span className="type-metric font-semibold state-text-info">{formatPercent(summary.averageProbability)}</span>.
               </p>
             </div>
 
@@ -703,22 +727,19 @@ export const BatchCsvTab = () => {
                   <div>
                     <p className="type-caption text-text-secondary">Rows delta</p>
               <p className={`type-metric mt-1 text-sm font-semibold ${(summary.total - previousSummary.total) >= 0 ? 'state-text-success' : 'state-text-error'}`}>
-                      {(summary.total - previousSummary.total) >= 0 ? '+' : ''}
-                      {summary.total - previousSummary.total}
+                      {formatSignedCount(summary.total - previousSummary.total)}
                     </p>
                   </div>
                   <div>
                     <p className="type-caption text-text-secondary">Purchased delta</p>
               <p className={`type-metric mt-1 text-sm font-semibold ${(summary.purchased - previousSummary.purchased) >= 0 ? 'state-text-success' : 'state-text-error'}`}>
-                      {(summary.purchased - previousSummary.purchased) >= 0 ? '+' : ''}
-                      {summary.purchased - previousSummary.purchased}
+                      {formatSignedCount(summary.purchased - previousSummary.purchased)}
                     </p>
                   </div>
                   <div>
                     <p className="type-caption text-text-secondary">Not purchased delta</p>
               <p className={`type-metric mt-1 text-sm font-semibold ${(summary.nonPurchased - previousSummary.nonPurchased) >= 0 ? 'state-text-success' : 'state-text-error'}`}>
-                      {(summary.nonPurchased - previousSummary.nonPurchased) >= 0 ? '+' : ''}
-                      {summary.nonPurchased - previousSummary.nonPurchased}
+                      {formatSignedCount(summary.nonPurchased - previousSummary.nonPurchased)}
                     </p>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ArrowUpDown, CheckCircle2, Download, Search, XCircle } from 'lucide-react'
+import { ArrowUpDown, CheckCircle2, Download, Search, XCircle, BarChart3, Users, Percent, Layers } from 'lucide-react'
 import {
   type ColumnDef,
   type PaginationState,
@@ -419,22 +419,38 @@ export const BatchResultsTable = ({
         </div>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-muted/35 p-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <p className="type-kicker text-muted-foreground">Metrics Summary</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-lg border border-border/60 bg-card/60 p-3">
-              <p className="type-caption">Purchase rate</p>
-              <p className="type-metric mt-1 text-sm font-semibold">{(metrics.purchaseRate * 100).toFixed(1)}%</p>
+              <div className="flex items-center gap-2">
+                <Percent className="h-3.5 w-3.5 text-green-600" />
+                <p className="type-caption">Purchase rate</p>
+              </div>
+              <p className="type-metric mt-1 text-sm font-semibold text-green-600 dark:text-green-400">{(metrics.purchaseRate * 100).toFixed(1)}%</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-card/60 p-3">
-              <p className="type-caption">Avg probability</p>
-              <p className="type-metric mt-1 text-sm font-semibold">{(metrics.averageProbability * 100).toFixed(1)}%</p>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
+                <p className="type-caption">Avg probability</p>
+              </div>
+              <p className="type-metric mt-1 text-sm font-semibold text-blue-600 dark:text-blue-400">{(metrics.averageProbability * 100).toFixed(1)}%</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-card/60 p-3">
-              <p className="type-caption">High confidence</p>
-              <p className="type-metric mt-1 text-sm font-semibold">{metrics.highConfidence}</p>
+              <div className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-amber-600" />
+                <p className="type-caption">High confidence</p>
+              </div>
+              <p className="type-metric mt-1 text-sm font-semibold text-amber-600 dark:text-amber-400">{metrics.highConfidence}</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-card/60 p-3">
-              <p className="type-caption">Rows</p>
-              <p className="type-metric mt-1 text-sm font-semibold">{metrics.total}</p>
+              <div className="flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="type-caption">Total rows</p>
+              </div>
+              <p className="type-metric mt-1 text-sm font-semibold text-foreground">{metrics.total}</p>
             </div>
           </div>
 
@@ -442,6 +458,19 @@ export const BatchResultsTable = ({
             <div className="flex h-full w-full">
               <div className="state-fill-success" style={{ width: `${metrics.total > 0 ? (metrics.purchased / metrics.total) * 100 : 0}%` }} />
               <div className="state-fill-error" style={{ width: `${metrics.total > 0 ? (metrics.notPurchased / metrics.total) * 100 : 0}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500" />
+                <span className="text-muted-foreground">Purchased: {metrics.purchased}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="text-muted-foreground">Not purchased: {metrics.notPurchased}</span>
+              </span>
             </div>
           </div>
 
