@@ -32,6 +32,34 @@ interface Toast {
   };
 }
 
+type ToastInput = Omit<Toast, "id">;
+
+let externalAddToast: ((toast: ToastInput) => string) | null = null;
+
+export const enqueueAnimatedToast = (toast: ToastInput) => {
+  if (!externalAddToast) {
+    if (typeof window !== "undefined") {
+      console.warn("AnimatedToastProvider is not mounted yet.");
+    }
+    return "";
+  }
+
+  return externalAddToast(toast);
+};
+
+export const toast = {
+  success: (message: string, duration = 4000) =>
+    enqueueAnimatedToast({ message, type: "success", duration }),
+  error: (message: string, duration = 5000) =>
+    enqueueAnimatedToast({ message, type: "error", duration }),
+  warning: (message: string, duration = 4500) =>
+    enqueueAnimatedToast({ message, type: "warning", duration }),
+  info: (message: string, duration = 4000) =>
+    enqueueAnimatedToast({ message, type: "info", duration }),
+  message: (message: string, duration = 4000) =>
+    enqueueAnimatedToast({ message, type: "default", duration }),
+};
+
 interface ToastContextType {
   toasts: Toast[];
   addToast: (toast: Omit<Toast, "id">) => string;
@@ -86,6 +114,16 @@ export function AnimatedToastProvider({
 
   const isTop = position.startsWith("top");
 
+  React.useEffect(() => {
+    externalAddToast = addToast;
+
+    return () => {
+      if (externalAddToast === addToast) {
+        externalAddToast = null;
+      }
+    };
+  }, [addToast]);
+
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast, clearAll }}>
       {children}
@@ -101,7 +139,7 @@ export function AnimatedToastProvider({
               key={toast.id}
               toast={toast}
               index={index}
-              onRemove={() => removeToast(toast.id)}
+              onRemove={removeToast}
               isTop={isTop}
             />
           ))}
@@ -115,19 +153,22 @@ export function AnimatedToastProvider({
 interface ToastItemProps {
   toast: Toast;
   index: number;
-  onRemove: () => void;
+  onRemove: (id: string) => void;
   isTop: boolean;
 }
 
 function ToastItem({ toast, index, onRemove, isTop }: ToastItemProps) {
   const { type = "default", title, message, duration = 5000, action } = toast;
+  const handleRemove = React.useCallback(() => {
+    onRemove(toast.id);
+  }, [onRemove, toast.id]);
 
   React.useEffect(() => {
     if (duration > 0) {
-      const timer = setTimeout(onRemove, duration);
+      const timer = setTimeout(handleRemove, duration);
       return () => clearTimeout(timer);
     }
-  }, [duration, onRemove]);
+  }, [duration, handleRemove]);
 
   const icons: Record<ToastType, React.ReactNode> = {
     success: <CheckCircle className="h-5 w-5 text-emerald-500" />,
@@ -188,7 +229,7 @@ function ToastItem({ toast, index, onRemove, isTop }: ToastItemProps) {
           )}
         </div>
         <button
-          onClick={onRemove}
+          onClick={handleRemove}
           className="flex-shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X className="h-4 w-4" />

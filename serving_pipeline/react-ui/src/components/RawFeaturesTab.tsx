@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { z } from 'zod'
 import { BrainCircuit } from 'lucide-react'
 
@@ -156,6 +156,7 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<Date | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
   const resultRef = useRef<HTMLDivElement | null>(null)
+  const hasShownRestoreToastRef = useRef(false)
 
   const onSubmit = useCallback(async (values: RawFeaturesFormValues) => {
     dispatch({ type: 'clearError' })
@@ -203,11 +204,23 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
       ) as Partial<RawFeaturesFormValues>
       form.reset({ ...defaultValues, ...sanitized })
       setDraftRestored(true)
-      toast.info('Restored your last Raw Features draft.')
+      if (!hasShownRestoreToastRef.current) {
+        toast.info('Restored your last Raw Features draft.', 2200)
+        hasShownRestoreToastRef.current = true
+      }
     } catch {
       window.localStorage.removeItem(RAW_DRAFT_KEY)
     }
   }, [form])
+
+  useEffect(() => {
+    if (!draftRestored) return
+    const timer = window.setTimeout(() => {
+      setDraftRestored(false)
+    }, 3200)
+
+    return () => window.clearTimeout(timer)
+  }, [draftRestored])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

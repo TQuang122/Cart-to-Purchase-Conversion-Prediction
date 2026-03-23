@@ -1,4 +1,4 @@
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -92,6 +92,7 @@ export const FeastLookupTab = () => {
   const [draftRestored, setDraftRestored] = useState(false)
   const [showPresets, setShowPresets] = useState(true)
   const resultRef = useRef<HTMLDivElement | null>(null)
+  const hasShownRestoreToastRef = useRef(false)
 
   const onSubmit = useCallback(async (values: FeastLookupFormValues) => {
     dispatch({ type: 'clearError' })
@@ -141,11 +142,23 @@ export const FeastLookupTab = () => {
       ) as Partial<FeastLookupFormValues>
       form.reset({ ...defaultValues, ...sanitized })
       setDraftRestored(true)
-      toast.info('Restored your last Feast draft.')
+      if (!hasShownRestoreToastRef.current) {
+        toast.info('Restored your last Feast draft.', 2200)
+        hasShownRestoreToastRef.current = true
+      }
     } catch {
       window.localStorage.removeItem(FEAST_DRAFT_KEY)
     }
   }, [form])
+
+  useEffect(() => {
+    if (!draftRestored) return
+    const timer = window.setTimeout(() => {
+      setDraftRestored(false)
+    }, 3200)
+
+    return () => window.clearTimeout(timer)
+  }, [draftRestored])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
