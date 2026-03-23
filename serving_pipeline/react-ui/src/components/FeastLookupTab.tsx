@@ -3,10 +3,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { DatabaseZap, Loader2, RotateCcw } from 'lucide-react'
+import { Activity, DatabaseZap, Gauge, Loader2, RotateCcw, ShieldCheck, Target } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import type { CartPrediction, FeatureContribution } from '@/types/api'
 import { PredictionResultCard } from '@/components/PredictionResultCard'
 import type { ConfidenceSignal } from '@/components/PredictionResultCard'
@@ -59,6 +60,24 @@ const FEAST_PRESET_SCENARIOS = [
   },
 ] as const
 
+const toTitleCase = (value: string) =>
+  value
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+
+const buildContributionSignals = (contributions: FeatureContribution[]): ConfidenceSignal[] => {
+  const ranked = [...contributions].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution)).slice(0, 3)
+  const maxAbs = Math.max(0.0001, ...ranked.map((item) => Math.abs(item.contribution)))
+
+  return ranked.map((item) => ({
+    label: item.display_name ?? toTitleCase(item.feature),
+    detail: `Contribution score ${item.contribution >= 0 ? '+' : ''}${item.contribution.toFixed(4)}`,
+    impact: item.contribution > 0 ? 'positive' : item.contribution < 0 ? 'negative' : 'neutral',
+    strength: Math.min(1, Math.abs(item.contribution) / maxAbs),
+  }))
+}
+
 export const FeastLookupTab = () => {
   const form = useForm<FeastLookupFormValues>({
     resolver: zodResolver(feastLookupSchema),
@@ -85,8 +104,10 @@ export const FeastLookupTab = () => {
         state.selectedModel,
         state.selectedThreshold
       )
-      setPreviousPrediction(prediction)
-      setPrediction(response)
+      setPrediction((currentPrediction) => {
+        setPreviousPrediction(currentPrediction)
+        return response
+      })
       toast.success('Feast lookup prediction completed!')
     } catch (error) {
       const baseMessage =
@@ -105,7 +126,7 @@ export const FeastLookupTab = () => {
     } finally {
       dispatch({ type: 'finishRequest' })
     }
-  }, [apiClient, dispatch, prediction, state.selectedModel, state.selectedThreshold])
+  }, [apiClient, dispatch, state.selectedModel, state.selectedThreshold])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -178,6 +199,16 @@ export const FeastLookupTab = () => {
         },
           ]
         : []
+
+  const probability = prediction?.probability ?? 0
+  const decisionThreshold = prediction?.decision_threshold ?? 0.5
+  const thresholdGap = probability - decisionThreshold
+  const confidenceBand = (() => {
+    const midpointDistance = Math.abs(probability - 0.5)
+    if (midpointDistance >= 0.35) return 'High'
+    if (midpointDistance >= 0.18) return 'Medium'
+    return 'Low'
+  })()
 
   const draftSavedLabel =
     lastDraftSavedAt
@@ -273,7 +304,9 @@ export const FeastLookupTab = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 rounded-xl border border-border/60 bg-card/40 p-4">
+              <fieldset className="space-y-4 rounded-xl border border-border/60 bg-card/40 p-4" aria-describedby="feast-lookup-hint">
+                <legend className="type-kicker px-1 text-muted-foreground">Lookup entities</legend>
+                <p id="feast-lookup-hint" className="type-caption -mt-1 px-1 text-muted-foreground">Provide both entity IDs to resolve online features in Feast before scoring.</p>
                 <FormField
                   control={form.control}
                   name="user_id"
@@ -283,7 +316,7 @@ export const FeastLookupTab = () => {
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="e.g. 10001"
+                          placeholder="e.g. 512550662"
                           disabled={isLoading}
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
@@ -302,7 +335,7 @@ export const FeastLookupTab = () => {
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="e.g. 20001"
+                          placeholder="e.g. 12703493"
                           disabled={isLoading}
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
@@ -312,7 +345,7 @@ export const FeastLookupTab = () => {
                     </FormItem>
                   )}
                 />
-              </div>
+              </fieldset>
             )}
 
             <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/60 bg-card/90 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6" role="region" aria-label="Feast lookup actions">
@@ -358,7 +391,58 @@ export const FeastLookupTab = () => {
         )}
 
         {prediction ? (
-          <div ref={resultRef}>
+          <div ref={resultRef} className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4" aria-live="polite" aria-atomic="false">
+              <div className="state-surface-info rounded-xl border p-3.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="type-caption">Conversion probability</p>
+                  <Activity className="h-4 w-4 text-blue-500" />
+                </div>
+                <p className="type-metric state-text-info text-xl font-semibold">{(probability * 100).toFixed(1)}%</p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-surface-2/70 p-3.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="type-caption">Confidence band</p>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </div>
+                <p className="type-heading text-xl font-semibold text-text-primary">{confidenceBand}</p>
+              </div>
+              <div className={thresholdGap >= 0 ? 'state-surface-success rounded-xl border p-3.5' : 'state-surface-error rounded-xl border p-3.5'}>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="type-caption">Threshold gap</p>
+                  <Target className={thresholdGap >= 0 ? 'h-4 w-4 text-green-500' : 'h-4 w-4 text-rose-500'} />
+                </div>
+                <p className={cn('type-metric text-xl font-semibold', thresholdGap >= 0 ? 'state-text-success' : 'state-text-error')}>
+                  {thresholdGap >= 0 ? '+' : ''}
+                  {(thresholdGap * 100).toFixed(1)} pts
+                </p>
+              </div>
+              <div className="state-surface-warning rounded-xl border p-3.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="type-caption">Feature quality</p>
+                  <Gauge className="h-4 w-4 text-amber-500" />
+                </div>
+                <p className="type-metric state-text-warning text-xl font-semibold">
+                  {prediction.feature_quality ? prediction.feature_quality.grade : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div className="panel-accent rounded-xl border border-border/70 bg-surface-2/68 p-4">
+              <p className="type-kicker mb-2">Feast story</p>
+              <p className="type-body text-sm text-text-primary">
+                Entity pair <span className="type-metric font-semibold">{lastLookupInput?.user_id ?? 'N/A'}</span> and <span className="type-metric font-semibold">{lastLookupInput?.product_id ?? 'N/A'}</span>{' '}
+                resolved online features, then model <span className={cn('font-semibold', prediction.is_purchased === 1 ? 'state-text-success' : 'state-text-error')}>{prediction.is_purchased === 1 ? 'favored conversion' : 'flagged lower purchase intent'}</span> at{' '}
+                <span className="type-metric font-semibold">{(probability * 100).toFixed(1)}%</span> against threshold{' '}
+                <span className="type-metric font-semibold">{(decisionThreshold * 100).toFixed(1)}%</span>.
+              </p>
+              {prediction.feature_quality ? (
+                <p className="type-caption mt-2 text-muted-foreground">
+                  Quality score {prediction.feature_quality.score.toFixed(1)} ({prediction.feature_quality.grade}) with fallback ratio {(prediction.feature_quality.fallback_ratio * 100).toFixed(1)}%.
+                </p>
+              ) : null}
+            </div>
+
             <PredictionResultCard
               prediction={prediction}
               previousPrediction={previousPrediction}
@@ -372,20 +456,3 @@ export const FeastLookupTab = () => {
     </Card>
   )
 }
-  const toTitleCase = (value: string) =>
-    value
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-
-  const buildContributionSignals = (contributions: FeatureContribution[]): ConfidenceSignal[] => {
-    const ranked = [...contributions].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution)).slice(0, 3)
-    const maxAbs = Math.max(0.0001, ...ranked.map((item) => Math.abs(item.contribution)))
-
-    return ranked.map((item) => ({
-      label: item.display_name ?? toTitleCase(item.feature),
-      detail: `Contribution score ${item.contribution >= 0 ? '+' : ''}${item.contribution.toFixed(4)}`,
-      impact: item.contribution > 0 ? 'positive' : item.contribution < 0 ? 'negative' : 'neutral',
-      strength: Math.min(1, Math.abs(item.contribution) / maxAbs),
-    }))
-  }
