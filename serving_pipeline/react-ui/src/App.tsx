@@ -6,7 +6,6 @@ import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRi
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
 import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
 import { ChatbotWidget } from '@/components/ChatbotWidget'
-import { MeshGradient } from '@/components/MeshGradient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { MorphingText } from '@/components/ui/text-morphing'
@@ -73,7 +72,6 @@ function App() {
 
   const { state, dispatch } = useAppContext()
   const INTRO_SEEN_KEY = 'c2p_intro_seen_v1'
-  const CALM_MODE_KEY = 'c2p_calm_mode_v1'
   const activeTab = getTabFromLocation(location.pathname, location.search)
   const [isIntroOpen, setIsIntroOpen] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -85,10 +83,6 @@ function App() {
   const [introSessionKey, setIntroSessionKey] = useState(0)
   const [autoPresetId, setAutoPresetId] = useState<string | null>(null)
   const [autoPresetToken, setAutoPresetToken] = useState(0)
-  const [calmMode] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem(CALM_MODE_KEY) === 'true'
-  })
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 1024px)').matches
@@ -165,10 +159,10 @@ function App() {
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
       <Toaster position="top-right" richColors />
-      <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
       <main id="main-content" tabIndex={-1} className="relative min-h-screen">
         <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
-          <section className="dashboard-shell dashboard-card-scale-lg section-reveal section-delay-1 panel-accent px-3 py-3 sm:px-4">
+          <section className="dashboard-shell dashboard-card-scale-lg section-reveal section-delay-1 panel-accent relative isolate overflow-hidden px-3 py-3 sm:px-4">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(125%_95%_at_6%_6%,hsl(var(--interactive)/0.2),transparent_55%),radial-gradient(120%_100%_at_96%_-8%,hsl(var(--warning)/0.14),transparent_58%)]" />
             <div className="mb-3 flex items-center justify-between border-b border-border/70 pb-3">
               <h1 className="type-display mt-1 flex items-center gap-2 text-2xl font-extrabold text-text-primary sm:text-3xl lg:text-5xl">
                 <NeuralCartMark variant="halo" />
@@ -198,7 +192,8 @@ function App() {
             </div>
             <DashboardHeader apiBaseUrl={state.apiBaseUrl} layout="command" onOpenIntro={handleOpenIntro} onStatsUpdate={handleStatsUpdate} selectedModel={state.selectedModel} onSelectModel={(m) => dispatch({ type: 'setSelectedModel', payload: m })} selectedThreshold={state.selectedThreshold} onThresholdChange={handleThresholdChange} />
           </section>
-          <section className="mt-6 dashboard-shell dashboard-card-scale-md section-reveal section-delay-3 panel-accent p-3 sm:p-4">
+          <section className="mt-6 dashboard-shell dashboard-card-scale-md section-reveal section-delay-3 panel-accent relative isolate overflow-hidden p-3 sm:p-4">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(130%_100%_at_0%_0%,hsl(var(--success)/0.12),transparent_52%),radial-gradient(140%_100%_at_100%_100%,hsl(var(--interactive-hover)/0.16),transparent_60%)]" />
             <div className="mb-3 flex items-center justify-between">
               <h2 className="type-heading flex items-center gap-2.5 text-base font-semibold text-text-primary sm:text-lg">
                 <Sparkles className="state-text-success h-[18px] w-[18px] sm:h-5 sm:w-5" />
