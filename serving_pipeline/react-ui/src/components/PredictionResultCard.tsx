@@ -115,6 +115,24 @@ export const PredictionResultCard = ({
     }
   }, [prediction.is_purchased])
 
+  const confidenceTone = useMemo(() => {
+    if (confidence === 'High') {
+      return prediction.is_purchased === 1
+        ? 'state-badge-success'
+        : 'state-badge-error'
+    }
+    if (confidence === 'Medium') return 'state-badge-warning'
+    return 'state-badge-info'
+  }, [confidence, prediction.is_purchased])
+
+  const probabilityDescriptor = useMemo(() => {
+    if (percentage >= 75) return 'Strong conversion momentum'
+    if (percentage >= 55) return 'Positive conversion tendency'
+    if (percentage >= 45) return 'Borderline intent signal'
+    if (percentage >= 25) return 'Weak conversion tendency'
+    return 'Very low purchase intent'
+  }, [percentage])
+
   const insights = useMemo(() => {
     if (prediction.explainability?.notes?.length) {
       return prediction.explainability.notes
@@ -185,16 +203,32 @@ export const PredictionResultCard = ({
       </div>
 
       <div className="grid gap-5 p-5 sm:grid-cols-[200px_1fr] sm:p-6">
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border/60 bg-background/50 p-4">
-          <div className="relative h-28 w-28">
+        <div className="relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-border/60 bg-background/55 p-4">
+          <div className={cn('pointer-events-none absolute inset-x-6 top-4 h-20 rounded-full blur-2xl opacity-45', prediction.is_purchased === 1 ? 'bg-emerald-500/40' : 'bg-rose-500/35')} aria-hidden="true" />
+          <div className="relative h-32 w-32">
+            <div className="absolute inset-0 animate-pulse rounded-full border border-border/35" aria-hidden="true" />
             <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120" role="img" aria-label="Probability ring">
-              <circle cx="60" cy="60" r={ringRadius} className="stroke-muted/40" strokeWidth="10" fill="none" />
+              <defs>
+                <linearGradient id="probability-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={prediction.is_purchased === 1 ? '#34d399' : '#fb7185'} />
+                  <stop offset="100%" stopColor={prediction.is_purchased === 1 ? '#10b981' : '#f43f5e'} />
+                </linearGradient>
+              </defs>
+              <circle cx="60" cy="60" r={ringRadius} className="stroke-muted/30" strokeWidth="12" fill="none" />
+              <circle
+                cx="60"
+                cy="60"
+                r={ringRadius + 7}
+                className="stroke-border/30"
+                strokeWidth="2"
+                fill="none"
+              />
               <circle
                 cx="60"
                 cy="60"
                 r={ringRadius}
-                className={cn('transition-colors duration-300', resultTheme.ring)}
-                strokeWidth="10"
+                stroke="url(#probability-gradient)"
+                strokeWidth="12"
                 fill="none"
                 strokeLinecap="round"
                 strokeDasharray={ringCircumference}
@@ -203,11 +237,16 @@ export const PredictionResultCard = ({
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-2xl font-bold tabular-nums">{animatedPercentage}%</span>
-              <span className="type-caption text-xs uppercase tracking-wide text-muted-foreground">Probability</span>
+              <span className="font-mono text-[2rem] font-bold leading-none tabular-nums text-foreground">{animatedPercentage}%</span>
+              <span className="type-caption mt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Probability</span>
             </div>
           </div>
-          <p className="type-caption">Animated confidence score</p>
+          <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/65 px-2.5 py-1">
+            <span className={cn('h-2 w-2 animate-pulse rounded-full', prediction.is_purchased === 1 ? 'bg-emerald-400' : 'bg-rose-400')} />
+            <span className="type-caption text-xs">Live confidence signal</span>
+          </div>
+          <p className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold', confidenceTone)}>{confidence} confidence</p>
+          <p className="type-caption text-center text-xs text-muted-foreground">{probabilityDescriptor}</p>
         </div>
 
         <div className="space-y-4">
