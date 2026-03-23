@@ -41,21 +41,21 @@ const FEAST_DRAFT_KEY = 'c2p_feast_draft_v1'
 const FEAST_PRESET_SCENARIOS = [
   {
     id: 'high-intent',
-    title: 'High-intent shopper',
-    description: 'Example IDs for returning users with strong purchase activity.',
-    values: { user_id: '10001', product_id: '20001' },
+    title: 'Known pair A',
+    description: 'Sample IDs aligned with feature-store utility examples.',
+    values: { user_id: '512550662', product_id: '12703493' },
   },
   {
-    id: 'price-sensitive',
-    title: 'Price-sensitive segment',
-    description: 'Useful for testing lower-confidence behavior around threshold.',
-    values: { user_id: '10124', product_id: '20456' },
+    id: 'known-pair-b',
+    title: 'Known pair B',
+    description: 'Alternate sample pair used in Feast scripts.',
+    values: { user_id: '516301799', product_id: '12702930' },
   },
   {
-    id: 'new-entity',
-    title: 'Cold-start entity',
-    description: 'Try sparse/new entity IDs to verify fallback behavior.',
-    values: { user_id: '10999', product_id: '20999' },
+    id: 'known-pair-c',
+    title: 'Known pair C',
+    description: 'Additional sample pair for quick lookup validation.',
+    values: { user_id: '561066382', product_id: '3800966' },
   },
 ] as const
 
@@ -85,9 +85,7 @@ export const FeastLookupTab = () => {
         state.selectedModel,
         state.selectedThreshold
       )
-      if (prediction) {
-        setPreviousPrediction(prediction)
-      }
+      setPreviousPrediction(prediction)
       setPrediction(response)
       toast.success('Feast lookup prediction completed!')
     } catch (error) {
@@ -321,7 +319,7 @@ export const FeastLookupTab = () => {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="type-heading text-sm font-semibold">Ready to run Feast lookup prediction</p>
-                  <p className="readable-helper">Shortcut: Ctrl+Enter | Enter entity IDs or load a preset above.</p>
+                  <p className="readable-helper">Shortcut: Ctrl+Enter | Enter entity IDs or load one of the known sample pairs above.</p>
                   <p className="type-caption" aria-live="polite">{draftSavedLabel}</p>
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
