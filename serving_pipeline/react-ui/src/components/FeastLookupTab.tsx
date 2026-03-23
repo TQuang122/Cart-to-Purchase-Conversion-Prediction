@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { DatabaseZap } from 'lucide-react'
+import { DatabaseZap, Loader2, RotateCcw } from 'lucide-react'
 
 import { useAppContext } from '@/contexts/AppContext'
 import { ApiClientError } from '@/lib/api'
@@ -38,6 +38,27 @@ const defaultValues: FeastLookupFormValues = {
 }
 const FEAST_DRAFT_KEY = 'c2p_feast_draft_v1'
 
+const FEAST_PRESET_SCENARIOS = [
+  {
+    id: 'high-intent',
+    title: 'High-intent shopper',
+    description: 'Example IDs for returning users with strong purchase activity.',
+    values: { user_id: '10001', product_id: '20001' },
+  },
+  {
+    id: 'price-sensitive',
+    title: 'Price-sensitive segment',
+    description: 'Useful for testing lower-confidence behavior around threshold.',
+    values: { user_id: '10124', product_id: '20456' },
+  },
+  {
+    id: 'new-entity',
+    title: 'Cold-start entity',
+    description: 'Try sparse/new entity IDs to verify fallback behavior.',
+    values: { user_id: '10999', product_id: '20999' },
+  },
+] as const
+
 export const FeastLookupTab = () => {
   const form = useForm<FeastLookupFormValues>({
     resolver: zodResolver(feastLookupSchema),
@@ -50,6 +71,7 @@ export const FeastLookupTab = () => {
   const [lastLookupInput, setLastLookupInput] = useState<FeastLookupFormValues | null>(null)
   const [lastDraftSavedAt, setLastDraftSavedAt] = useState<Date | null>(null)
   const [draftRestored, setDraftRestored] = useState(false)
+  const [showPresets, setShowPresets] = useState(true)
   const resultRef = useRef<HTMLDivElement | null>(null)
 
   const onSubmit = useCallback(async (values: FeastLookupFormValues) => {
@@ -173,6 +195,18 @@ export const FeastLookupTab = () => {
     toast.info('Feast draft cleared.')
   }
 
+  const applyPreset = useCallback((values: FeastLookupFormValues, label: string) => {
+    form.reset({ ...defaultValues, ...values })
+    setDraftRestored(false)
+    setPrediction(null)
+    dispatch({ type: 'clearError' })
+    toast.success(`Preset loaded: ${label}`)
+  }, [dispatch, form])
+
+  const retryPrediction = useCallback(() => {
+    form.handleSubmit(onSubmit)()
+  }, [form, onSubmit])
+
   return (
     <Card>
       <CardHeader className="space-y-3 border-b border-border/60 bg-surface-2/65 pb-5">
@@ -188,6 +222,38 @@ export const FeastLookupTab = () => {
       <CardContent className="space-y-6 pt-7 sm:pt-8">
         <Form {...form}>
           <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="panel-accent rounded-xl border border-border/60 bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="type-heading text-sm font-semibold text-foreground">Preset entity scenarios</p>
+                  <p className="readable-helper">Use sample IDs to validate Feast lookup, fallback, and threshold behavior.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPresets((prev) => !prev)}
+                  className="micro-interactive rounded-lg border border-border/50 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {showPresets ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {showPresets ? (
+                <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  {FEAST_PRESET_SCENARIOS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.values, preset.title)}
+                      className="micro-interactive rounded-lg border border-border/60 bg-background/60 p-3 text-left transition-colors hover:border-[hsl(var(--interactive)/0.5)] hover:bg-[hsl(var(--interactive)/0.12)]"
+                    >
+                      <p className="type-heading text-sm font-semibold text-foreground">{preset.title}</p>
+                      <p className="type-caption mt-1">{preset.description}</p>
+                      <p className="type-caption mt-2 text-text-secondary">u:{preset.values.user_id} / p:{preset.values.product_id}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             {isLoading ? (
               <div className="section-reveal section-delay-2 panel-accent rounded-xl border border-border/60 bg-muted/25 p-4">
                 <StatusBanner
@@ -219,12 +285,12 @@ export const FeastLookupTab = () => {
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Enter user id"
+                          placeholder="e.g. 10001"
                           disabled={isLoading}
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
                       </FormControl>
-                      <FormDescription className="type-caption">Enter a valid Feast entity user ID.</FormDescription>
+                      <FormDescription className="type-caption">Use a Feast entity key (numeric or string) available in online store.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -238,12 +304,12 @@ export const FeastLookupTab = () => {
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Enter product id"
+                          placeholder="e.g. 20001"
                           disabled={isLoading}
                           className="h-11 border-border/70 bg-background/70 focus-visible:ring-[hsl(var(--focus-ring)/0.4)]"
                         />
                       </FormControl>
-                      <FormDescription className="type-caption">Enter a valid Feast entity product ID.</FormDescription>
+                      <FormDescription className="type-caption">Use product entity key from Feast registry to fetch online features.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -255,14 +321,19 @@ export const FeastLookupTab = () => {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="type-heading text-sm font-semibold">Ready to run Feast lookup prediction</p>
-                  <p className="readable-helper">Shortcut: Ctrl+Enter | Provide valid user and product IDs.</p>
+                  <p className="readable-helper">Shortcut: Ctrl+Enter | Enter entity IDs or load a preset above.</p>
                   <p className="type-caption" aria-live="polite">{draftSavedLabel}</p>
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" onClick={clearDraft} className="h-11 border-border/70 bg-background/50">Clear Draft</Button>
                   <Button type="submit" disabled={isLoading} className="h-11 min-w-32 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
-                    {isLoading ? 'Predicting...' : 'Predict'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Predicting...
+                      </>
+                    ) : 'Predict'}
                   </Button>
                 </div>
               </div>
@@ -270,7 +341,17 @@ export const FeastLookupTab = () => {
           </form>
         </Form>
 
-        {state.errorMessage ? <StatusBanner variant="error" message={state.errorMessage} /> : null}
+        {state.errorMessage ? (
+          <div className="space-y-3">
+            <StatusBanner variant="error" message={state.errorMessage} />
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" onClick={retryPrediction} disabled={isLoading} className="h-10 border-border/70 bg-background/50">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Retry prediction
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {!prediction && !isLoading && (
           <div className="type-body mt-2 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-center text-sm">
