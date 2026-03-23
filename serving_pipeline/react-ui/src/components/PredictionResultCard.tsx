@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, RotateCcw, Sparkles, Wand2, XCircle } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, RotateCcw, Sparkles, Target, TrendingDown, TrendingUp, Wand2, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -177,6 +177,9 @@ export const PredictionResultCard = ({
   const ringRadius = 48
   const ringCircumference = 2 * Math.PI * ringRadius
   const ringOffset = ringCircumference - (animatedPercentage / 100) * ringCircumference
+  const thresholdMarkerLeft = `${Math.min(96, Math.max(4, thresholdPercentage))}%`
+  const thresholdGapPoints = Math.abs(thresholdGap * 100)
+  const isAboveThreshold = thresholdGap >= 0
 
   return (
     <div
@@ -250,44 +253,75 @@ export const PredictionResultCard = ({
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-3 rounded-xl border border-border/55 bg-background/45 p-3.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Conversion Probability</span>
-              <span className="font-mono text-sm font-semibold tabular-nums">{animatedPercentage}%</span>
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <Activity className="h-4 w-4" />
+                Conversion Probability
+              </span>
+              <span className={cn('rounded-full border px-2.5 py-1 font-mono text-sm font-semibold tabular-nums', resultTheme.badge)}>{animatedPercentage}%</span>
             </div>
-            <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/60">
+
+            <div className="relative pt-6">
+              <div className="relative h-4 w-full overflow-hidden rounded-full border border-border/50 bg-muted/55">
+                <div
+                  className={cn(
+                    'relative h-full transition-[width] duration-700 ease-out',
+                    prediction.is_purchased === 1
+                      ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-green-500'
+                      : 'bg-gradient-to-r from-rose-400 via-rose-500 to-red-500'
+                  )}
+                  style={{ width: `${animatedPercentage}%` }}
+                >
+                  <span className="absolute inset-0 animate-pulse bg-white/10" aria-hidden="true" />
+                </div>
+                <span
+                  className="pointer-events-none absolute top-1/2 z-[2] h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-white/60 bg-white/80 shadow-[0_0_10px_rgba(255,255,255,0.55)]"
+                  style={{ left: `${Math.min(98, Math.max(0, animatedPercentage))}%`, transform: 'translate(-50%, -50%)' }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-[1] w-px bg-foreground/75"
+                  style={{ left: thresholdMarkerLeft }}
+                  aria-hidden="true"
+                />
+              </div>
               <div
-                className={cn('h-full transition-[width] duration-500 ease-out', resultTheme.progress)}
-                style={{ width: `${animatedPercentage}%` }}
-              />
-              <div
-                className="pointer-events-none absolute inset-y-0 z-[1] w-px bg-foreground/75"
-                style={{ left: `${thresholdPercentage}%` }}
+                className="pointer-events-none absolute left-0 top-0 -translate-x-1/2 rounded-md border border-border/60 bg-background/90 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                style={{ left: thresholdMarkerLeft }}
                 aria-hidden="true"
-              />
+              >
+                T {thresholdPercentage.toFixed(1)}%
+              </div>
             </div>
-            <div className="type-caption flex items-center justify-between">
-              <span>Current: {animatedPercentage}%</span>
-              <span>Threshold marker: {thresholdPercentage.toFixed(1)}%</span>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/65 px-2 py-1 text-muted-foreground">
+                Current {animatedPercentage}%
+              </span>
+              <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-1', isAboveThreshold ? 'state-badge-success' : 'state-badge-error')}>
+                {isAboveThreshold ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {isAboveThreshold ? '+' : '-'}{thresholdGapPoints.toFixed(1)} pts vs threshold
+              </span>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <div className="rounded-lg border border-border/55 bg-gradient-to-br from-background/65 to-background/35 p-3 transition-colors hover:border-border/80">
               <p className="type-caption">Prediction</p>
               <p className={cn('mt-1 text-sm font-semibold', resultTheme.emphasis)}>
                 {prediction.is_purchased === 1 ? 'Purchased' : 'Not Purchased'}
               </p>
             </div>
-            <div className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <div className="rounded-lg border border-border/55 bg-gradient-to-br from-background/65 to-background/35 p-3 transition-colors hover:border-border/80">
               <p className="type-caption">Raw probability</p>
               <p className="type-metric mt-1 text-sm font-semibold">{probability.toFixed(4)}</p>
             </div>
-            <div className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <div className="rounded-lg border border-border/55 bg-gradient-to-br from-background/65 to-background/35 p-3 transition-colors hover:border-border/80">
               <p className="type-caption">Decision threshold</p>
-              <p className="type-metric mt-1 text-sm font-semibold">{decisionThreshold.toFixed(4)}</p>
+              <p className="type-metric mt-1 inline-flex items-center gap-1.5 text-sm font-semibold"><Target className="h-3.5 w-3.5" />{decisionThreshold.toFixed(4)}</p>
             </div>
-            <div className="rounded-lg border border-border/55 bg-background/45 p-3">
+            <div className="rounded-lg border border-border/55 bg-gradient-to-br from-background/65 to-background/35 p-3 transition-colors hover:border-border/80">
               <p className="type-caption">Probability - threshold</p>
               <p className={cn('type-metric mt-1 text-sm font-semibold', thresholdGap >= 0 ? 'state-text-success' : 'state-text-error')}>
                 {thresholdGap >= 0 ? '+' : ''}
