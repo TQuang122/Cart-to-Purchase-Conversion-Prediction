@@ -1,0 +1,96 @@
+# =============================================================================
+# TabICL Model Configuration - Airflow (Memory-Efficient)
+# =============================================================================
+# Optimized for running in Docker containers with limited memory (~2-4GB).
+# Uses fewer ensembles, smaller batch size, and disk offloading.
+
+mlflow:
+  tracking_uri: "http://mlflow_server:5000"
+  experiment_name: "test_cart_to_purchase_prediction_tabicl_v1.0"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://mlflow_server:5000"
+  tags:
+    task: "cart-to-purchase"
+    purpose: "test"
+    model_family: "tabicl"
+    environment: "airflow"
+
+model:
+  model_type: "tabicl"
+  name: "tabicl_ctp"
+  version: "1.0.0"
+  type: "classifier"
+  description: "TabICL model for cart-to-purchase prediction (Airflow memory-efficient)"
+  train_test_split: 0.2
+  random_state: 42
+
+  parameters:
+    # Force CPU - Airflow containers have no GPU
+    device: "cpu"
+
+    # Reduced ensemble for memory efficiency (4 vs 8)
+    n_estimators: 4
+
+    # Smaller batch size to reduce peak memory
+    batch_size: 2
+
+    # Single normalization to reduce memory
+    norm_methods:
+      - "none"
+
+    # Feature shuffle method
+    feat_shuffle_method: "latin"
+
+    # Class shuffle method
+    class_shuffle_method: "shift"
+
+    # Outlier handling
+    outlier_threshold: 4.0
+
+    # Prediction settings
+    softmax_temperature: 1.0
+
+    # Disk offloading to keep memory low
+    offload_mode: "disk"
+    kv_cache: false
+
+    # Other settings
+    verbose: true
+    random_state: 42
+
+evaluation:
+  thresholds:
+    accuracy_score: 0.75
+    f1_score: 0.60
+    auc_roc: 0.85
+
+# Feature Configuration
+features:
+  target_column: "is_purchased"
+  training_features:
+    - "price"
+    - "activity_count"
+    - "event_weekday"
+    - "event_hour"
+    - "user_total_events"
+    - "user_total_views"
+    - "user_total_carts"
+    - "user_total_purchases"
+    - "user_view_to_cart_rate"
+    - "user_cart_to_purchase_rate"
+    - "user_avg_purchase_price"
+    - "user_unique_products"
+    - "user_unique_categories"
+    - "product_total_events"
+    - "product_total_views"
+    - "product_total_carts"
+    - "product_total_purchases"
+    - "product_view_to_cart_rate"
+    - "product_cart_to_purchase_rate"
+    - "product_unique_buyers"
+    - "brand_purchase_rate"
+    - "price_vs_user_avg"
+    - "price_vs_category_avg"
+    - "brand"
+    - "category_code_level1"
+    - "category_code_level2"

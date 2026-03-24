@@ -1,4 +1,4 @@
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, FileText, X, Download, Files, TrendingUp, TrendingDown, Target, Zap, Activity, Gauge, Sparkles } from 'lucide-react'
 

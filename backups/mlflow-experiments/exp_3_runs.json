@@ -1,0 +1,127 @@
+{
+  "runs": [
+    {
+      "info": {
+        "run_uuid": "7c68a74b12944e85b8ac0f9d6a425690",
+        "experiment_id": "3",
+        "run_name": "catboost_k8s_staging_1774174432",
+        "user_id": "jky",
+        "status": "FINISHED",
+        "start_time": 1774174432983,
+        "end_time": 1774174508440,
+        "artifact_uri": "s3://mlflow/3/7c68a74b12944e85b8ac0f9d6a425690/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "7c68a74b12944e85b8ac0f9d6a425690"
+      },
+      "data": {
+        "metrics": [
+          {
+            "key": "auc",
+            "value": 0.9271081119080031,
+            "timestamp": 1774174439957,
+            "step": 0
+          },
+          {
+            "key": "f1_score",
+            "value": 0.7255624515128006,
+            "timestamp": 1774174439973,
+            "step": 0
+          }
+        ],
+        "params": [
+          {
+            "key": "param_iterations",
+            "value": "500"
+          },
+          {
+            "key": "param_depth",
+            "value": "8"
+          },
+          {
+            "key": "param_learning_rate",
+            "value": "0.05"
+          },
+          {
+            "key": "param_l2_leaf_reg",
+            "value": "3.0"
+          },
+          {
+            "key": "param_min_data_in_leaf",
+            "value": "20"
+          },
+          {
+            "key": "param_subsample",
+            "value": "0.85"
+          },
+          {
+            "key": "param_colsample_bylevel",
+            "value": "0.75"
+          },
+          {
+            "key": "param_loss_function",
+            "value": "Logloss"
+          },
+          {
+            "key": "param_eval_metric",
+            "value": "Logloss"
+          },
+          {
+            "key": "param_auto_class_weights",
+            "value": "Balanced"
+          },
+          {
+            "key": "param_random_strength",
+            "value": "1.0"
+          },
+          {
+            "key": "param_bagging_temperature",
+            "value": "1.0"
+          },
+          {
+            "key": "param_task_type",
+            "value": "CPU"
+          },
+          {
+            "key": "param_thread_count",
+            "value": "-1"
+          },
+          {
+            "key": "param_random_seed",
+            "value": "42"
+          },
+          {
+            "key": "param_verbose",
+            "value": "0"
+          }
+        ],
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "jky"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "-"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "catboost_k8s_staging_1774174432"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {
+        "model_outputs": [
+          {
+            "model_id": "m-55fb80aa6e0746bba9d588a3eccf1c09",
+            "step": 0
+          }
+        ]
+      }
+    }
+  ]
+}

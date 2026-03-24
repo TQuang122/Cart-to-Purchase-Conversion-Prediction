@@ -1,0 +1,363 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Architecture Overview" id="arch-overview">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- TITLE -->
+        <mxCell id="title1" value="Cart-to-Purchase Conversion Prediction - Full System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1A1A2E;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="900" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- === RAW DATA LAYER === -->
+        <mxCell id="raw_label" value="[RAW DATA]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Raw CSV -->
+        <mxCell id="raw_kaggle" value="2019-Nov.csv.gz&#xa;(285M+ events)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#90A4AE;strokeColor=#546E7A;fontColor=#FFFFFF;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="20" y="105" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- === DATA PIPELINE LAYER === -->
+        <mxCell id="dp_label" value="[DATA PIPELINE]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="30" y="190" width="140" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- PySpark FE -->
+        <mxCell id="spark_fe" value="feature_engineering&#xa;_v2_optimized.py&#xa;(PySpark)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;fontColor=#FFFFFF;fontSize=11;align=center;arcSize=15;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="225" width="170" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Feature Groups Box -->
+        <mxCell id="feat_groups" value="Feature Groups&#xa;--------------&#xa;- User aggregates&#xa;- Product aggregates&#xa;- Brand aggregates&#xa;- Price comparisons&#xa;- Temporal features" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;fontSize=10;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="210" y="200" width="150" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- Output Parquet -->
+        <mxCell id="feat_parquet" value="Parquet Features&#xa;(Train + Test)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#2E7D32;strokeColor=#1B5E20;fontColor=#FFFFFF;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="20" y="310" width="170" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Feast Feature Store -->
+        <mxCell id="feast_fs" value="Feast Feature Store&#xa;(Parquet-backed)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6A1B9A;strokeColor=#4A148C;fontColor=#FFFFFF;fontSize=11;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="210" y="310" width="150" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#546E7A;endArrow=classic;endFill=1;dashed=0;" edge="1" parent="1" source="raw_kaggle" target="spark_fe">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1B5E20;endArrow=classic;endFill=1;" edge="1" parent="1" source="spark_fe" target="feat_parquet">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4A148C;endArrow=classic;endFill=1;" edge="1" parent="1" source="feat_parquet" target="feast_fs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#1565C0;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="spark_fe" target="feat_groups">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- === MODEL PIPELINE LAYER === -->
+        <mxCell id="mp_label" value="[MODEL PIPELINE]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="420" y="70" width="150" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Train Script -->
+        <mxCell id="train_script" value="train.py&#xa;(XGBoost / LightGBM&#xa;/ CatBoost / TabICL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E65100;strokeColor=#BF360C;fontColor=#FFFFFF;fontSize=11;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="400" y="105" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- MLflow Tracking -->
+        <mxCell id="mlflow" value="MLflow Tracking&#xa;(localhost:5000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF6F00;strokeColor=#E65100;fontColor=#FFFFFF;fontSize=11;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="580" y="105" width="160" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Model Registry -->
+        <mxCell id="model_reg" value="MLflow Model Registry&#xa;models:/purchase_propensity&#xa;_model@staging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8F00;strokeColor=#E65100;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="400" y="190" width="200" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- MinIO S3 -->
+        <mxCell id="minio" value="MinIO S3&#xa;(model artifacts)&#xa;s3://mlflow/models/" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#795548;strokeColor=#4E342E;fontColor=#FFFFFF;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="620" y="190" width="150" height="65" as="geometry"/>
+        </mxCell>
+
+        <!-- HPO Script -->
+        <mxCell id="hpo" value="hpo.py&#xa;(Hyperparameter Tuning)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D84315;strokeColor=#BF360C;fontColor=#FFFFFF;fontSize=11;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="400" y="270" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- XGBoost Champion -->
+        <mxCell id="xgboost_model" value="XGBoost Champion&#xa;run_id: ae1f94...&#xa;AUC=0.931 | F1=0.738&#xa;threshold=0.525" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57F17;strokeColor=#E65100;fontColor=#1A1A2E;fontSize=10;align=center;arcSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="580" y="270" width="190" height="65" as="geometry"/>
+        </mxCell>
+
+        <!-- Airflow DAGs -->
+        <mxCell id="airflow" value="Airflow DAGs&#xa;cart_to_purchase_e2e&#xa;cart_to_purchase_k8s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0277BD;strokeColor=#01579B;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="400" y="360" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#E65100;endArrow=classic;endFill=1;" edge="1" parent="1" source="train_script" target="model_reg">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="train_script" target="mlflow">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4E342E;endArrow=classic;endFill=1;" edge="1" parent="1" source="model_reg" target="minio">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#BF360C;endArrow=classic;endFill=1;" edge="1" parent="1" source="hpo" target="xgboost_model">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1B5E20;endArrow=classic;endFill=1;" edge="1" parent="1" source="feat_parquet" target="train_script">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="105" y="380"/>
+              <mxPoint x="480" y="380"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="a10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#01579B;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="model_reg" target="airflow">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- === SERVING PIPELINE LAYER === -->
+        <mxCell id="sp_label" value="[SERVING PIPELINE]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="840" y="70" width="160" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- FastAPI App -->
+        <mxCell id="fastapi" value="FastAPI Backend&#xa;(uvicorn :8000)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00838F;strokeColor=#006064;fontColor=#FFFFFF;fontSize=12;align=center;arcSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="105" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Serving Routers -->
+        <mxCell id="routers_box" value="API Routers&#xa;-------------&#xa;/predict/*&#xa;/chat/*&#xa;/dataset/*&#xa;/model/*&#xa;/health" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F7FA;strokeColor=#00838F;fontColor=#006064;fontSize=10;align=left;spacingLeft=8;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="840" y="190" width="160" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- BinaryClassifierWrapper -->
+        <mxCell id="bc_wrapper" value="BinaryClassifierWrapper&#xa;(XGBClassifier +&#xa;Feature Encoders)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00695C;strokeColor=#004D40;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="105" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Feature Encoders JSON -->
+        <mxCell id="encoders" value="encoders.json&#xa;(Target Encoding)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#004D40;strokeColor=#00251A;fontColor=#FFFFFF;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="190" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- show_chart.py -->
+        <mxCell id="show_chart" value="show_chart.py&#xa;(Dashboard Charts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="840" y="325" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Chatbot -->
+        <mxCell id="chatbot_func" value="chatbot_function.py&#xa;(Gemini AI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#311B92;strokeColor=#1A088E;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="325" width="180" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Gemini API -->
+        <mxCell id="gemini_api" value="Google Gemini API&#xa;(gemini-2.5-flash)" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#7C4DFF;strokeColor=#651FFF;fontColor=#FFFFFF;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="395" width="160" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#006064;endArrow=classic;endFill=1;" edge="1" parent="1" source="fastapi" target="routers_box">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#004D40;endArrow=classic;endFill=1;" edge="1" parent="1" source="fastapi" target="bc_wrapper">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#004D40;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="bc_wrapper" target="encoders">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#651FFF;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="chatbot_func" target="gemini_api">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- === FRONTEND LAYER === -->
+        <mxCell id="fe_label" value="[FRONTEND - React 19]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="70" width="180" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- React App -->
+        <mxCell id="react_app" value="React App&#xa;(Vite 7.3.1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00ACC1;strokeColor=#00838F;fontColor=#FFFFFF;fontSize=12;align=center;arcSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="105" width="180" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Main Routes -->
+        <mxCell id="routes_box" value="Routes&#xa;----------&#xa;/  -&gt; Prediction Studio&#xa;/dataset -&gt; Dataset Explorer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F7FA;strokeColor=#00ACC1;fontColor=#006064;fontSize=10;align=left;spacingLeft=8;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="190" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Prediction Tabs -->
+        <mxCell id="tabs_box" value="3 Prediction Tabs&#xa;--------------&#xa;1. Raw Features&#xa;2. Batch CSV&#xa;3. Feast Lookup" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F7FA;strokeColor=#00ACC1;fontColor=#006064;fontSize=10;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="105" width="150" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Components -->
+        <mxCell id="comps_box" value="Key Components&#xa;--------------&#xa;- DashboardHeader&#xa;- PredictionResultCard&#xa;- BatchCsvTab&#xa;- FeastLookupTab&#xa;- ChatbotWidget&#xa;- DatasetStatsPage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#00ACC1;fontColor=#006064;fontSize=10;align=left;spacingLeft=8;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="280" width="200" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- Recharts Charts -->
+        <mxCell id="recharts" value="Recharts&#xa;(Dataset Explorer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#263238;strokeColor=#1A1A2E;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="420" width="150" height="45" as="geometry"/>
+        </mxCell>
+
+        <!-- Deployment -->
+        <mxCell id="vercel" value="Vercel&#xa;(vercel.app) /&#xa;localhost:5173" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#424242;fontColor=#FFFFFF;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="420" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="a15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00838F;endArrow=classic;endFill=1;" edge="1" parent="1" source="react_app" target="routes_box">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="a16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#00838F;endArrow=classic;endFill=1;" edge="1" parent="1" source="react_app" target="tabs_box">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- === INFRASTRUCTURE LAYER === -->
+        <mxCell id="infra_label" value="[INFRASTRUCTURE]" style="text;html=1;strokeColor=#B0BEC5;fillColor=#ECEFF1;fontSize=13;fontStyle=1;fontColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="490" width="150" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- KinD Cluster -->
+        <mxCell id="kind_cluster" value="KinD K8s Cluster&#xa;(kind ctp-cluster)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1A237E;strokeColor=#0D1B9E;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="520" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- K8s Services -->
+        <mxCell id="k8s_svcs" value="K8s Services&#xa;-------------&#xa;mlops namespace&#xa;- mlflow:5000&#xa;- minio:9000/9001&#xa;- airflow:8080&#xa;- serving-api:8000&#xa;- kafka:9092&#xa;- postgres:5432" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#C5CAE9;strokeColor=#1A237E;fontColor=#1A237E;fontSize=9;align=left;spacingLeft=6;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="580" width="180" height="130" as="geometry"/>
+        </mxCell>
+
+        <!-- Docker Compose -->
+        <mxCell id="docker" value="Docker Compose&#xa;(local dev)&#xa;./infra/docker/run.sh up" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="530" width="150" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- k8s deploy.sh -->
+        <mxCell id="deploy_sh" value="infra/k8s/deploy.sh&#xa;(full MLOps infra)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0D47A1;strokeColor=#01579B;fontColor=#FFFFFF;fontSize=10;align=center;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="595" width="150" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- CI/CD -->
+        <mxCell id="cicd" value="GitHub Actions&#xa;-------------&#xa;build-serving-image.yml&#xa;test.yml" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontColor=#6A1B9A;fontSize=9;align=left;spacingLeft=6;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="660" width="150" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- === INFERENCE FLOWS === -->
+        <mxCell id="flow1" value="HTTP REST&#xa;(CORS enabled)" style="text;html=1;strokeColor=#37474F;fillColor=#ECEFF1;fontSize=9;fontColor=#37474F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="120" width="80" height="35" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#00838F;endArrow=classic;endFill=1;" edge="1" parent="1" source="react_app" target="fastapi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flow2" value="MLflow SDK&#xa;MinIO S3 URI" style="text;html=1;strokeColor=#37474F;fillColor=#ECEFF1;fontSize=9;fontColor=#37474F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="750" y="205" width="70" height="35" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4E342E;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="bc_wrapper" target="minio">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flow3" value="Feast SDK&#xa;feature retrieval" style="text;html=1;strokeColor=#37474F;fillColor=#ECEFF1;fontSize=9;fontColor=#37474F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="670" y="330" width="70" height="35" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4A148C;endArrow=classic;endFill=1;" edge="1" parent="1" source="feast_fs" target="fastapi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#263238;endArrow=classic;endFill=1;" edge="1" parent="1" source="show_chart" target="fastapi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#651FFF;endArrow=classic;endFill=1;" edge="1" parent="1" source="chatbot_func" target="fastapi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flow4" value="MLflow SDK&#xa;model_uri" style="text;html=1;strokeColor=#37474F;fillColor=#ECEFF1;fontSize=9;fontColor=#37474F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="700" y="215" width="70" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#E65100;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="model_reg" target="bc_wrapper">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="218"/>
+              <mxPoint x="1110" y="218"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="af7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#37474F;endArrow=classic;endFill=1;" edge="1" parent="1" source="react_app" target="recharts">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="af8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1.5;strokeColor=#37474F;endArrow=classic;endFill=1;" edge="1" parent="1" source="recharts" target="vercel">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- === LEGEND === -->
+        <mxCell id="legend_box" value="Legend&#xa;--------&#xa;Solid arrow = primary flow&#xa;Dashed = config/lookup&#xa;Cloud = external services&#xa;Cylinder = storage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;fontColor=#424242;fontSize=9;align=left;spacingLeft=6;verticalAlign=top;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="390" width="160" height="85" as="geometry"/>
+        </mxCell>
+
+        <!-- === END-TO-END FLOW === -->
+        <mxCell id="e2e_label" value="End-to-End Flow: Raw Events -&gt; Model -&gt; API -&gt; UI" style="text;html=1;strokeColor=#37474F;fillColor=#FFF8E1;strokeWidth=2;fontSize=11;fontColor=#37474F;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="420" width="320" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="big_flow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#E53935;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="raw_kaggle" target="airflow">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="165"/>
+              <mxPoint x="100" y="480"/>
+              <mxPoint x="480" y="480"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="legend_conn" value="" style="endArrow=none;html=1;strokeWidth=2;strokeColor=#E53935;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="40" y="420" as="sourcePoint"/>
+            <mxPoint x="300" y="420" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="big_flow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#E53935;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="airflow" target="bc_wrapper">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="770" y="390"/>
+              <mxPoint x="1110" y="390"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="big_flow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#E53935;endArrow=classic;endFill=1;dashed=1;" edge="1" parent="1" source="fastapi" target="react_app">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

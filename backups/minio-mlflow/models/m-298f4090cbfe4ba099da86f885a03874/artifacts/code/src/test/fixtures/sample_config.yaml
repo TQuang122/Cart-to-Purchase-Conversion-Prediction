@@ -1,0 +1,48 @@
+# Sample configuration for testing
+# This file is used by test fixtures
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "test_experiment"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://localhost:5000"
+  tags:
+    task: "cart-to-purchase"
+    purpose: "test"
+    model_family: "logistic_regression"
+
+model:
+  model_type: "logistic_regression"
+  name: "test_model"
+  version: "1.0.0"
+  type: "classifier"
+  description: "Test model for unit tests"
+  train_test_split: 0.2
+  random_state: 42
+
+  parameters:
+    C: 1.0
+    max_iter: 100
+    solver: "lbfgs"
+    random_state: 42
+
+evaluation:
+  thresholds:
+    accuracy_score: 0.7
+    f1_score: 0.6
+
+  shap:
+    enabled: false
+    explainer_type: "linear"
+    max_samples: 100
+
+features:
+  target_column: "is_purchased"
+  training_features:
+    - "price"
+    - "activity_count"
+    - "event_weekday"
+    - "event_hour"
+    - "user_total_events"
+    - "user_total_views"
+    - "user_total_carts"

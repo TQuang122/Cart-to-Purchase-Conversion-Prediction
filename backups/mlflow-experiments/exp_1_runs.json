@@ -1,0 +1,317 @@
+{
+  "runs": [
+    {
+      "info": {
+        "run_uuid": "ae1f94061e684639b5abce84cde2654c",
+        "experiment_id": "1",
+        "run_name": "xgboost_k8s_airflow_manual",
+        "user_id": "airflow",
+        "status": "FINISHED",
+        "start_time": 1773985533443,
+        "end_time": 1773985597307,
+        "artifact_uri": "s3://mlflow/ae1f94061e684639b5abce84cde2654c/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "ae1f94061e684639b5abce84cde2654c"
+      },
+      "data": {
+        "metrics": [
+          {
+            "key": "train_accuracy",
+            "value": 0.8562679781015125,
+            "timestamp": 1773985557171,
+            "step": 0
+          },
+          {
+            "key": "test_accuracy",
+            "value": 0.8561860068259386,
+            "timestamp": 1773985557195,
+            "step": 0
+          }
+        ],
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "airflow"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "/opt/airflow/model_pipeline/src/scripts/train.py"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "xgboost_k8s_airflow_manual"
+          },
+          {
+            "key": "project",
+            "value": "cart-to-purchase"
+          },
+          {
+            "key": "task",
+            "value": "binary_classification"
+          },
+          {
+            "key": "team",
+            "value": "mlops"
+          },
+          {
+            "key": "environment",
+            "value": "kubernetes"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {
+        "model_outputs": [
+          {
+            "model_id": "m-2810ba11c72c458ebf55fec5b62818d0",
+            "step": 0
+          }
+        ]
+      }
+    },
+    {
+      "info": {
+        "run_uuid": "5d78bd7cba1640c9be9980f9c1a4a135",
+        "experiment_id": "1",
+        "run_name": "xgboost_k8s_airflow_manual",
+        "user_id": "airflow",
+        "status": "RUNNING",
+        "start_time": 1773984958849,
+        "artifact_uri": "s3://mlflow/5d78bd7cba1640c9be9980f9c1a4a135/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "5d78bd7cba1640c9be9980f9c1a4a135"
+      },
+      "data": {
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "airflow"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "/opt/airflow/model_pipeline/src/scripts/train.py"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "xgboost_k8s_airflow_manual"
+          },
+          {
+            "key": "project",
+            "value": "cart-to-purchase"
+          },
+          {
+            "key": "task",
+            "value": "binary_classification"
+          },
+          {
+            "key": "team",
+            "value": "mlops"
+          },
+          {
+            "key": "environment",
+            "value": "kubernetes"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {}
+    },
+    {
+      "info": {
+        "run_uuid": "1050c8b30e67469f8f8a98a343363d2e",
+        "experiment_id": "1",
+        "run_name": "xgboost_k8s_20260320_000052",
+        "user_id": "jky",
+        "status": "FINISHED",
+        "start_time": 1773939655740,
+        "end_time": 1773939726229,
+        "artifact_uri": "s3://mlflow/1050c8b30e67469f8f8a98a343363d2e/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "1050c8b30e67469f8f8a98a343363d2e"
+      },
+      "data": {
+        "metrics": [
+          {
+            "key": "train_accuracy",
+            "value": 0.8562797101959366,
+            "timestamp": 1773939660760,
+            "step": 0
+          },
+          {
+            "key": "test_accuracy",
+            "value": 0.8559129692832764,
+            "timestamp": 1773939660777,
+            "step": 0
+          }
+        ],
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "jky"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction-wt-migrate-react/model_pipeline/src/scripts/train.py"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.source.git.commit",
+            "value": "837588b8de9293ee0492d52bdf989cca9aab60da"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "xgboost_k8s_20260320_000052"
+          },
+          {
+            "key": "project",
+            "value": "cart-to-purchase"
+          },
+          {
+            "key": "task",
+            "value": "binary_classification"
+          },
+          {
+            "key": "team",
+            "value": "mlops"
+          },
+          {
+            "key": "environment",
+            "value": "kubernetes"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {
+        "model_outputs": [
+          {
+            "model_id": "m-f3220810a55646edb0a9f7d82f045e6c",
+            "step": 0
+          }
+        ]
+      }
+    },
+    {
+      "info": {
+        "run_uuid": "4c00692f63b74ca7b47c2796ec920018",
+        "experiment_id": "1",
+        "run_name": "xgboost_k8s_20260319_235924",
+        "user_id": "jky",
+        "status": "FAILED",
+        "start_time": 1773939568016,
+        "end_time": 1773939570083,
+        "artifact_uri": "s3://mlflow/4c00692f63b74ca7b47c2796ec920018/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "4c00692f63b74ca7b47c2796ec920018"
+      },
+      "data": {
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "jky"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction-wt-migrate-react/model_pipeline/src/scripts/train.py"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.source.git.commit",
+            "value": "837588b8de9293ee0492d52bdf989cca9aab60da"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "xgboost_k8s_20260319_235924"
+          },
+          {
+            "key": "project",
+            "value": "cart-to-purchase"
+          },
+          {
+            "key": "task",
+            "value": "binary_classification"
+          },
+          {
+            "key": "team",
+            "value": "mlops"
+          },
+          {
+            "key": "environment",
+            "value": "kubernetes"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {}
+    },
+    {
+      "info": {
+        "run_uuid": "daada436febb45e685ef3654c527450d",
+        "experiment_id": "1",
+        "run_name": "xgboost_k8s_20260319_235809",
+        "user_id": "jky",
+        "status": "FAILED",
+        "start_time": 1773939492866,
+        "end_time": 1773939497662,
+        "artifact_uri": "s3://mlflow/daada436febb45e685ef3654c527450d/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "daada436febb45e685ef3654c527450d"
+      },
+      "data": {
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "jky"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "/Users/jky/Library/CloudStorage/GoogleDrive-lethanhquang094@gmail.com/My Drive/FPT/Semester_4/DAP391m/Cart-to-Purchase-Conversion-Prediction-wt-migrate-react/model_pipeline/src/scripts/train.py"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.source.git.commit",
+            "value": "837588b8de9293ee0492d52bdf989cca9aab60da"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "xgboost_k8s_20260319_235809"
+          },
+          {
+            "key": "project",
+            "value": "cart-to-purchase"
+          },
+          {
+            "key": "task",
+            "value": "binary_classification"
+          },
+          {
+            "key": "team",
+            "value": "mlops"
+          },
+          {
+            "key": "environment",
+            "value": "kubernetes"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {}
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "experiments": [
+    {
+      "experiment_id": "3",
+      "name": "test_cart_to_purchase_prediction_catboost_v1.0",
+      "artifact_location": "s3://mlflow/3",
+      "lifecycle_stage": "active",
+      "last_update_time": 1774174432878,
+      "creation_time": 1774174432878
+    },
+    {
+      "experiment_id": "2",
+      "name": "test_cart_to_purchase_prediction_lightgbm_v1.0",
+      "artifact_location": "s3://mlflow/2",
+      "lifecycle_stage": "active",
+      "last_update_time": 1774174351174,
+      "creation_time": 1774174351174
+    },
+    {
+      "experiment_id": "1",
+      "name": "cart_purchase_propensity",
+      "artifact_location": "s3://mlflow/",
+      "lifecycle_stage": "active",
+      "last_update_time": 1773939345364,
+      "creation_time": 1773939345364,
+      "tags": [
+        {
+          "key": "mlflow.experimentKind",
+          "value": "custom_model_development"
+        }
+      ]
+    },
+    {
+      "experiment_id": "0",
+      "name": "Default",
+      "artifact_location": "s3://mlflow/0",
+      "lifecycle_stage": "active",
+      "last_update_time": 1773935603166,
+      "creation_time": 1773935603166,
+      "tags": [
+        {
+          "key": "mlflow.experimentKind",
+          "value": "custom_model_development"
+        }
+      ]
+    }
+  ]
+}

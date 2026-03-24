@@ -1,0 +1,52 @@
+artifact_path: s3://mlflow/1/models/m-a05d25ae7efc4fe28e3f4677d8b49e50/artifacts
+flavors:
+  python_function:
+    cloudpickle_version: 3.1.2
+    code: null
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pyfunc.model
+    python_model: python_model.pkl
+    python_version: 3.10.19
+    streamable: false
+is_signature_from_type_hint: false
+mlflow_version: 3.8.1
+model_id: m-a05d25ae7efc4fe28e3f4677d8b49e50
+model_size_bytes: 25311307
+model_uuid: m-a05d25ae7efc4fe28e3f4677d8b49e50
+prompts: null
+run_id: 62071ee9d1ae4ac6b617e8ce62fe6165
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "string", "name": "category_code_level1", "required": true},
+    {"type": "string", "name": "category_code_level2", "required": true}, {"type":
+    "string", "name": "brand", "required": true}, {"type": "long", "name": "event_weekday",
+    "required": true}, {"type": "double", "name": "price", "required": true}, {"type":
+    "long", "name": "activity_count", "required": true}, {"type": "long", "name":
+    "event_hour", "required": true}, {"type": "long", "name": "user_total_events",
+    "required": true}, {"type": "long", "name": "user_total_views", "required": true},
+    {"type": "long", "name": "user_total_carts", "required": true}, {"type": "long",
+    "name": "user_total_purchases", "required": true}, {"type": "double", "name":
+    "user_view_to_cart_rate", "required": true}, {"type": "double", "name": "user_cart_to_purchase_rate",
+    "required": true}, {"type": "double", "name": "user_avg_purchase_price", "required":
+    true}, {"type": "long", "name": "user_unique_products", "required": true}, {"type":
+    "long", "name": "user_unique_categories", "required": true}, {"type": "long",
+    "name": "product_total_events", "required": true}, {"type": "long", "name": "product_total_views",
+    "required": true}, {"type": "long", "name": "product_total_carts", "required":
+    true}, {"type": "long", "name": "product_total_purchases", "required": true},
+    {"type": "double", "name": "product_view_to_cart_rate", "required": true}, {"type":
+    "double", "name": "product_cart_to_purchase_rate", "required": true}, {"type":
+    "long", "name": "product_unique_buyers", "required": true}, {"type": "double",
+    "name": "brand_purchase_rate", "required": true}, {"type": "double", "name": "price_vs_user_avg",
+    "required": true}, {"type": "double", "name": "price_vs_category_avg", "required":
+    true}]'
+  outputs: '[{"type": "float", "name": "prob", "required": true}, {"type": "long",
+    "name": "pred", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-03-18 15:14:46.483014'

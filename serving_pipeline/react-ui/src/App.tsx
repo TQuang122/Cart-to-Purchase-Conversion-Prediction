@@ -38,9 +38,9 @@ interface TabConfig {
 }
 
 const tabs: TabConfig[] = [
-  { id: 'raw', label: 'Raw Features', icon: <Database className="h-5 w-5" />, description: 'Enter features manually for single prediction', shortcut: '⌘1', gradient: 'from-blue-500 to-cyan-400', iconBg: 'bg-blue-500/20 text-blue-400' },
-  { id: 'batch', label: 'Batch CSV', icon: <FileSpreadsheet className="h-5 w-5" />, description: 'Upload CSV file for bulk predictions', shortcut: '⌘2', gradient: 'from-emerald-500 to-green-400', iconBg: 'bg-emerald-500/20 text-emerald-400' },
-  { id: 'feast', label: 'Feast Lookup', icon: <Search className="h-5 w-5" />, description: 'Query features from Feast feature store', shortcut: '⌘3', gradient: 'from-purple-500 to-pink-400', iconBg: 'bg-purple-500/20 text-purple-400' },
+  { id: 'raw', label: 'Raw Features', icon: <Database className="h-5 w-5" />, description: 'Enter features manually for single prediction', shortcut: '1', gradient: 'from-blue-500 to-cyan-400', iconBg: 'bg-blue-500/20 text-blue-400' },
+  { id: 'batch', label: 'Batch CSV', icon: <FileSpreadsheet className="h-5 w-5" />, description: 'Upload CSV file for bulk predictions', shortcut: '2', gradient: 'from-emerald-500 to-green-400', iconBg: 'bg-emerald-500/20 text-emerald-400' },
+  { id: 'feast', label: 'Feast Lookup', icon: <Search className="h-5 w-5" />, description: 'Query features from Feast feature store', shortcut: '3', gradient: 'from-purple-500 to-pink-400', iconBg: 'bg-purple-500/20 text-purple-400' },
 ]
 
 const isTabValue = (value: string): value is TabValue => value === 'raw' || value === 'batch' || value === 'feast'

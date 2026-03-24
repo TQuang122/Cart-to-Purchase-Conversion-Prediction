@@ -27,3 +27,4 @@ wheels/
 #VJ|# Data files
 #YM|model_pipeline/src/data/*.csv
 .vercel
+.env*.local

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAP391 - Cart-to-Purchase Conversion Prediction - Slide 1</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0f0f1a;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    color: #e0e0e0;
+  }
+
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 40%, #16213e 100%);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle grid overlay */
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Top accent line */
+  .slide::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00ACC1, #7C4DFF, #00ACC1);
+  }
+
+  /* ========== HEADER ========== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px 10px;
+    flex-shrink: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .badge-fpt {
+    background: linear-gradient(135deg, #E53935, #B71C1C);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .slide-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.5px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pipeline-badge {
+    background: rgba(0,172,193,0.15);
+    border: 1px solid rgba(0,172,193,0.4);
+    color: #00ACC1;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ========== MAIN CONTENT ========== */
+  .main {
+    display: flex;
+    flex: 1;
+    padding: 0 28px 12px;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  /* ========== LEFT COLUMN ========== */
+  .left-col {
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Problem Statement */
+  .problem-box {
+    background: linear-gradient(135deg, rgba(0,172,193,0.12), rgba(124,77,255,0.08));
+    border: 1px solid rgba(0,172,193,0.3);
+    border-left: 3px solid #00ACC1;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .problem-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #00ACC1;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .problem-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.5;
+  }
+
+  .problem-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+  }
+
+  /* Metrics Row */
+  .metrics-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .metric-card {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .metric-card.green { border-top: 2px solid #43A047; }
+  .metric-card.orange { border-top: 2px solid #FB8C00; }
+  .metric-card.blue { border-top: 2px solid #1E88E5; }
+
+  .metric-value {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .metric-card.green .metric-value { color: #66BB6A; }
+  .metric-card.orange .metric-value { color: #FFA726; }
+  .metric-card.blue .metric-value { color: #42A5F5; }
+
+  .metric-label {
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .metric-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 1px;
+  }
+
+  /* Tech Stack */
+  .tech-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .tech-tag {
+    font-size: 8.5px;
+    font-weight: 600;
+    padding: 3px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+
+  .tech-tag.data { background: rgba(30,136,229,0.2); color: #64B5F6; border: 1px solid rgba(30,136,229,0.3); }
+  .tech-tag.train { background: rgba(251,140,0,0.2); color: #FFB74D; border: 1px solid rgba(251,140,0,0.3); }
+  .tech-tag.serve { background: rgba(0,172,193,0.2); color: #4DD0E1; border: 1px solid rgba(0,172,193,0.3); }
+  .tech-tag.ui { background: rgba(124,77,255,0.2); color: #B39DDB; border: 1px solid rgba(124,77,255,0.3); }
+  .tech-tag.deploy { background: rgba(67,160,71,0.2); color: #81C784; border: 1px solid rgba(67,160,71,0.3); }
+
+  /* Features */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 7px 8px;
+  }
+
+  .feature-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .feature-icon.c1 { background: rgba(46,125,50,0.3); color: #66BB6A; }
+  .feature-icon.c2 { background: rgba(124,77,255,0.3); color: #B39DDB; }
+  .feature-icon.c3 { background: rgba(251,140,0,0.3); color: #FFB74D; }
+  .feature-icon.c4 { background: rgba(30,136,229,0.3); color: #64B5F6; }
+  .feature-icon.c5 { background: rgba(0,172,193,0.3); color: #4DD0E1; }
+  .feature-icon.c6 { background: rgba(229,57,53,0.3); color: #EF5350; }
+  .feature-icon.c7 { background: rgba(124,77,255,0.3); color: #CE93D8; }
+
+  .feature-info { flex: 1; min-width: 0; }
+
+  .feature-name {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #e8e8e8;
+    line-height: 1.3;
+  }
+
+  .feature-desc {
+    font-size: 7.5px;
+    color: rgba(255,255,255,0.35);
+    line-height: 1.3;
+    margin-top: 1px;
+  }
+
+  /* ========== RIGHT COLUMN — DIAGRAM ========== */
+  .right-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .diagram-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  .diagram-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+  }
+
+  .diagram-link {
+    font-size: 8px;
+    color: rgba(0,172,193,0.7);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .diagram-link:hover { color: #00ACC1; }
+
+  .diagram-container {
+    flex: 1;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .diagram-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ========== FOOTER ========== */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 28px 10px;
+    flex-shrink: 0;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .footer-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 8px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .footer-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  .footer-right {
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+  }
+
+  /* ========== DIAGRAM OVERLAY LOADING ========== */
+  .diagram-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(15,15,26,0.9);
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 2.5px solid rgba(0,172,193,0.2);
+    border-top-color: #00ACC1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .diagram-loading span {
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.5px;
+  }
+
+  .diagram-hint {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+    pointer-events: none;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <span class="badge-fpt">FPT University</span>
+      <span class="slide-title">DAP391 · Machine Learning Operations</span>
+    </div>
+    <div class="header-right">
+      <span class="pipeline-badge">MLOps Pipeline</span>
+      <span class="pipeline-badge">XGBoost</span>
+      <span class="pipeline-badge">KinD K8s</span>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- Problem Statement -->
+      <div class="problem-box">
+        <div class="problem-label">Bài toán · Problem Statement</div>
+        <div class="problem-text">
+          "Người dùng thêm sản phẩm vào giỏ hàng — họ có mua không?"
+        </div>
+        <div class="problem-sub">
+          Binary Classification · Purchase (1) vs No Purchase (0) · Conditional target
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card green">
+          <div class="metric-value">0.9312</div>
+          <div class="metric-label">AUC</div>
+          <div class="metric-sub">ROC-AUC Score</div>
+        </div>
+        <div class="metric-card orange">
+          <div class="metric-value">0.7381</div>
+          <div class="metric-label">F1 @ 0.525</div>
+          <div class="metric-sub">F1-Score</div>
+        </div>
+        <div class="metric-card blue">
+          <div class="metric-value">0.525</div>
+          <div class="metric-label">Threshold</div>
+          <div class="metric-sub">Decision Boundary</div>
+        </div>
+      </div>
+
+      <!-- Tech Stack -->
+      <div style="padding: 0 2px;">
+        <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:5px;">Tech Stack</div>
+        <div class="tech-row">
+          <span class="tech-tag data">PySpark</span>
+          <span class="tech-tag data">Parquet</span>
+          <span class="tech-tag data">Feast</span>
+          <span class="tech-tag train">XGBoost</span>
+          <span class="tech-tag train">MLflow</span>
+          <span class="tech-tag train">MinIO</span>
+          <span class="tech-tag serve">FastAPI</span>
+          <span class="tech-tag serve">SHAP</span>
+          <span class="tech-tag ui">React 19</span>
+          <span class="tech-tag ui">Vite 7.3</span>
+          <span class="tech-tag ui">Recharts</span>
+          <span class="tech-tag ui">Gemini AI</span>
+          <span class="tech-tag deploy">KinD K8s</span>
+          <span class="tech-tag deploy">Docker</span>
+          <span class="tech-tag deploy">GitHub Actions</span>
+        </div>
+      </div>
+
+      <!-- 7 Main Features -->
+      <div style="padding: 0 2px; flex: 1; min-height: 0;">
+        <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:5px;">Tính năng chính · Main Features</div>
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-icon c1">1</div>
+            <div class="feature-info">
+              <div class="feature-name">Dự đoán đơn lẻ</div>
+              <div class="feature-desc">3 input tiers: 26 / 14 / 2 features</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon c2">2</div>
+            <div class="feature-info">
+              <div class="feature-name">SHAP Explainability</div>
+              <div class="feature-desc">Feature quality grading A → D</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon c3">3</div>
+            <div class="feature-info">
+              <div class="feature-name">Batch CSV</div>
+              <div class="feature-desc">Xử lý ≤ 1,000 rows mỗi lượt</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon c4">4</div>
+            <div class="feature-info">
+              <div class="feature-name">Gemini Chatbot</div>
+              <div class="feature-desc">Text · Image · Chart analysis</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon c5">5</div>
+            <div class="feature-info">
+              <div class="feature-name">Dataset Explorer</div>
+              <div class="feature-desc">Profile · Quality · Conversion</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon c6">6</div>
+            <div class="feature-info">
+              <div class="feature-name">Model Monitoring</div>
+              <div class="feature-desc">Health · MLflow lineage</div>
+            </div>
+          </div>
+          <div class="feature-item" style="grid-column: span 2;">
+            <div class="feature-icon c7">7</div>
+            <div class="feature-info">
+              <div class="feature-name">Threshold Control Slider</div>
+              <div class="feature-desc">Điều chỉnh ngưỡng quyết định real-time trên giao diện web</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN — DIAGRAM -->
+    <div class="right-col">
+      <div class="diagram-header">
+        <span class="diagram-title">System Architecture · API + Web App</span>
+        <a class="diagram-link" href="architecture_api_web.drawio" target="_blank">
+          ↗ Open in diagrams.net
+        </a>
+      </div>
+      <div class="diagram-container">
+        <div class="diagram-loading" id="loading">
+          <div class="spinner"></div>
+          <span>Loading diagram...</span>
+        </div>
+        <!--
+          NOTE: Để hiển thị diagram, cần mở local server:
+          python3 -m http.server 8899
+          Sau đó refresh trang này.
+        -->
+        <iframe
+          src="http://localhost:8899/architecture_api_web.drawio"
+          onload="document.getElementById('loading').style.display='none'"
+          title="Architecture API + Web App"
+        ></iframe>
+        <div class="diagram-hint">
+          React 19 ↔ FastAPI ↔ XGBoost · 4 routers · 15+ endpoints
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <div class="footer-item">
+        <div class="footer-dot" style="background:#43A047;"></div>
+        <span>Dataset: 2.9M rows × 31 features · Kaggle eCommerce</span>
+      </div>
+      <div class="footer-item">
+        <div class="footer-dot" style="background:#1E88E5;"></div>
+        <span>XGBoost Champion · run_id: ae1f94...</span>
+      </div>
+      <div class="footer-item">
+        <div class="footer-dot" style="background:#7C4DFF;"></div>
+        <span>Deployed: KinD K8s · ctpserving:v9 · 2 replicas</span>
+      </div>
+    </div>
+    <div class="footer-right">
+      DAP391 · Cart-to-Purchase Conversion Prediction · 2026
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

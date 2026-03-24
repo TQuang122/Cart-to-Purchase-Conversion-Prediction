@@ -1,0 +1,127 @@
+{
+  "runs": [
+    {
+      "info": {
+        "run_uuid": "20346b5745c94c00ab09603f9a008987",
+        "experiment_id": "2",
+        "run_name": "lightgbm_k8s_staging_1774174350",
+        "user_id": "jky",
+        "status": "FINISHED",
+        "start_time": 1774174351455,
+        "end_time": 1774174431552,
+        "artifact_uri": "s3://mlflow/2/20346b5745c94c00ab09603f9a008987/artifacts",
+        "lifecycle_stage": "active",
+        "run_id": "20346b5745c94c00ab09603f9a008987"
+      },
+      "data": {
+        "metrics": [
+          {
+            "key": "auc",
+            "value": 0.925935623249261,
+            "timestamp": 1774174361528,
+            "step": 0
+          },
+          {
+            "key": "f1_score",
+            "value": 0.7248934271835035,
+            "timestamp": 1774174362285,
+            "step": 0
+          }
+        ],
+        "params": [
+          {
+            "key": "param_n_estimators",
+            "value": "500"
+          },
+          {
+            "key": "param_max_depth",
+            "value": "8"
+          },
+          {
+            "key": "param_learning_rate",
+            "value": "0.05"
+          },
+          {
+            "key": "param_num_leaves",
+            "value": "64"
+          },
+          {
+            "key": "param_min_child_samples",
+            "value": "20"
+          },
+          {
+            "key": "param_subsample",
+            "value": "0.85"
+          },
+          {
+            "key": "param_subsample_freq",
+            "value": "1"
+          },
+          {
+            "key": "param_colsample_bytree",
+            "value": "0.75"
+          },
+          {
+            "key": "param_objective",
+            "value": "binary"
+          },
+          {
+            "key": "param_metric",
+            "value": "binary_logloss"
+          },
+          {
+            "key": "param_reg_alpha",
+            "value": "0.1"
+          },
+          {
+            "key": "param_reg_lambda",
+            "value": "1.5"
+          },
+          {
+            "key": "param_is_unbalance",
+            "value": "True"
+          },
+          {
+            "key": "param_n_jobs",
+            "value": "-1"
+          },
+          {
+            "key": "param_random_state",
+            "value": "42"
+          },
+          {
+            "key": "param_verbose",
+            "value": "-1"
+          }
+        ],
+        "tags": [
+          {
+            "key": "mlflow.user",
+            "value": "jky"
+          },
+          {
+            "key": "mlflow.source.name",
+            "value": "-"
+          },
+          {
+            "key": "mlflow.source.type",
+            "value": "LOCAL"
+          },
+          {
+            "key": "mlflow.runName",
+            "value": "lightgbm_k8s_staging_1774174350"
+          }
+        ]
+      },
+      "inputs": {},
+      "outputs": {
+        "model_outputs": [
+          {
+            "model_id": "m-9e27966f9e8d4bd9ac35deaf4062227e",
+            "step": 0
+          }
+        ]
+      }
+    }
+  ]
+}

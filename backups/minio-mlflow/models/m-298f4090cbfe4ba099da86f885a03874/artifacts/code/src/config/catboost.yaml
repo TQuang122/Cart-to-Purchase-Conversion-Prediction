@@ -1,0 +1,74 @@
+mlflow:
+  tracking_uri: "http://mlflow_server:5000"
+  experiment_name: "test_cart_to_purchase_prediction_catboost_v1.0"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://mlflow_server:5000"
+  tags:
+    task: "cart-to-purchase"
+    purpose: "test"
+    model_family: "catboost"
+
+model:
+  model_type: "catboost"
+  name: "catboost_ctp"
+  version: "1.0.0"
+  type: "classifier"
+  description: "CatBoost model for cart-to-purchase prediction"
+  train_test_split: 0.2
+  random_state: 42
+
+  parameters:
+    iterations: 500
+    depth: 8
+    learning_rate: 0.05
+    l2_leaf_reg: 3.0
+    min_data_in_leaf: 20
+    subsample: 0.85
+    colsample_bylevel: 0.75
+    loss_function: "Logloss"
+    eval_metric: "Logloss"
+    auto_class_weights: "Balanced"
+    random_strength: 1.0
+    bagging_temperature: 1.0
+    task_type: "CPU"
+    thread_count: -1
+    random_seed: 42
+    verbose: 0
+
+evaluation:
+  thresholds:
+    accuracy_score: 0.8
+    f1_score: 0.70
+
+# Feature Configuration
+features:
+  target_column: "is_purchased"
+  # Numerical features (23 features)
+  training_features:
+    - "price"
+    - "activity_count"
+    - "event_weekday"
+    - "event_hour"
+    - "user_total_events"
+    - "user_total_views"
+    - "user_total_carts"
+    - "user_total_purchases"
+    - "user_view_to_cart_rate"
+    - "user_cart_to_purchase_rate"
+    - "user_avg_purchase_price"
+    - "user_unique_products"
+    - "user_unique_categories"
+    - "product_total_events"
+    - "product_total_views"
+    - "product_total_carts"
+    - "product_total_purchases"
+    - "product_view_to_cart_rate"
+    - "product_cart_to_purchase_rate"
+    - "product_unique_buyers"
+    - "brand_purchase_rate"
+    - "price_vs_user_avg"
+    - "price_vs_category_avg"
+  # Categorical features (3 features)
+    - "brand"
+    - "category_code_level1"
+    - "category_code_level2"
