@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { Toaster } from 'sonner'
 import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
+import { Analytics } from '@vercel/analytics/react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
 import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
@@ -14,6 +14,7 @@ import { FeedbackWidget } from '@/components/ui/feedback-widget'
 import { Magnetic } from '@/components/ui/magnetic'
 import { RainbowButton } from '@/components/ui/rainbow-button'
 import { ScrollText } from '@/components/ui/scroll-text'
+import { AnimatedToastProvider } from '@/components/ui/animated-toast'
 import { useAppContext } from '@/contexts/AppContext'
 import { formatServingModelLabel } from '@/lib/api'
 
@@ -164,7 +165,6 @@ function App() {
   const workspaceElement = (
     <>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
-      <Toaster position="top-right" richColors />
       <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
       <main id="main-content" tabIndex={-1} className="relative min-h-screen">
         <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
@@ -275,13 +275,16 @@ function App() {
   )
 
   return (
-    <Routes>
-      <Route path="/" element={workspaceElement} />
-      <Route path="/raw" element={workspaceElement} />
-      <Route path="/batch" element={workspaceElement} />
-      <Route path="/feast" element={workspaceElement} />
-      <Route path="/dataset" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
-    </Routes>
+    <AnimatedToastProvider position="top-right" maxToasts={4}>
+      <Routes>
+        <Route path="/" element={workspaceElement} />
+        <Route path="/raw" element={workspaceElement} />
+        <Route path="/batch" element={workspaceElement} />
+        <Route path="/feast" element={workspaceElement} />
+        <Route path="/dataset" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
+      </Routes>
+      <Analytics />
+    </AnimatedToastProvider>
   )
 }
 
