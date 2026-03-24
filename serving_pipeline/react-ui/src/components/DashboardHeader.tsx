@@ -77,13 +77,16 @@ export function DashboardHeader({
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading')
   const [animatedPredictions, setAnimatedPredictions] = useState(0)
   const [animatedRate, setAnimatedRate] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
   const thresholdDebounceRef = useRef<number | null>(null)
   const THRESHOLD_DEBOUNCE_MS = 300
 
-  const fetchStats = useCallback(async () => {
-    setIsRefreshing(true)
+  const fetchStats = useCallback(async (options?: { manual?: boolean }) => {
+    const manual = options?.manual ?? false
+    if (manual) {
+      setIsManualRefreshing(true)
+    }
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), STATS_FETCH_TIMEOUT_MS)
@@ -101,13 +104,17 @@ export function DashboardHeader({
     } catch {
       setApiStatus('disconnected')
     } finally {
-      setIsRefreshing(false)
+      if (manual) {
+        setIsManualRefreshing(false)
+      }
     }
   }, [resolvedBaseUrl, onStatsUpdate])
 
   useEffect(() => {
-    fetchStats()
-    const interval = setInterval(fetchStats, STATS_REFRESH_INTERVAL_MS)
+    void fetchStats()
+    const interval = setInterval(() => {
+      void fetchStats()
+    }, STATS_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [fetchStats])
 
@@ -142,11 +149,11 @@ export function DashboardHeader({
     return lastUpdatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }, [lastUpdatedAt])
   const stateMessage = useMemo(() => {
-    if (isRefreshing) return 'Refreshing model stats and API heartbeat...'
+    if (isManualRefreshing) return 'Refreshing model stats and API heartbeat...'
     if (apiStatus === 'loading') return 'Checking API connection and service readiness.'
     if (apiStatus === 'disconnected') return 'API disconnected. Start backend to resume predictions.'
     return `Connected. Recent activity: ${stats?.recent_activity ?? 0} requests in the last 5 minutes.`
-  }, [apiStatus, isRefreshing, stats?.recent_activity])
+  }, [apiStatus, isManualRefreshing, stats?.recent_activity])
 
   const sourceValues = Object.values(stats?.model_sources ?? {})
   const derivedUsable = sourceValues.filter(
@@ -311,13 +318,15 @@ export function DashboardHeader({
                   <Info className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={fetchStats}
-                  disabled={isRefreshing}
+                  onClick={() => {
+                    void fetchStats({ manual: true })
+                  }}
+                  disabled={isManualRefreshing}
                   className="rounded-lg border border-border/60 bg-surface-2/70 p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
                   title="Refresh stats"
                   aria-label="Refresh dashboard statistics"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-4 w-4 ${isManualRefreshing ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
@@ -359,8 +368,8 @@ export function DashboardHeader({
             <button onClick={onOpenIntro} className="rounded-lg border border-border/60 bg-surface-2/70 p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background" title="About this project" aria-label="Open project introduction">
               <Info className="h-4 w-4" />
             </button>
-            <button onClick={fetchStats} disabled={isRefreshing} className="rounded-lg border border-border/60 bg-surface-2/70 p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50" title="Refresh stats" aria-label="Refresh dashboard statistics">
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <button onClick={() => { void fetchStats({ manual: true }) }} disabled={isManualRefreshing} className="rounded-lg border border-border/60 bg-surface-2/70 p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50" title="Refresh stats" aria-label="Refresh dashboard statistics">
+              <RefreshCw className={`h-4 w-4 ${isManualRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <div className={`type-caption flex items-center gap-2 rounded-full border px-3 py-1.5 font-medium ${status.bgColor}`}>
               {status.icon}

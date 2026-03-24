@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
 import { Analytics } from '@vercel/analytics/react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
@@ -95,8 +95,7 @@ function App() {
     return window.matchMedia('(min-width: 1024px)').matches
   })
   const [isSideRailOpen, setIsSideRailOpen] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return window.matchMedia('(min-width: 1024px)').matches
+    return false
   })
   const [, setStats] = useState<StatsData | null>(null)
 
@@ -260,8 +259,29 @@ function App() {
           </section>
           <footer className="mt-12 border-t border-border/50 py-6">
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-              <p className="type-body text-sm">Cart-to-Purchase Prediction System</p>
+              <div className="text-center sm:text-left">
+                <p className="type-kicker text-[hsl(var(--interactive-hover))]">Neural Commerce Intelligence</p>
+                <p className="type-heading mt-1 text-base font-semibold text-text-primary sm:text-lg">
+                  Cart-to-Purchase Prediction System
+                </p>
+                <p className="type-caption mt-1 text-text-secondary">
+                  Real-time conversion signals for action-ready decisions.
+                </p>
+              </div>
               <div className="type-caption flex items-center gap-4 text-text-secondary"><span className="flex items-center gap-1"><span className="state-fill-success h-1.5 w-1.5 rounded-full animate-pulse" />Operational</span><span>v1.1.0</span></div>
+            </div>
+            <div className="mt-3 flex justify-center sm:justify-start">
+              <a
+                href="https://github.com/TQuang122/Cart-to-Purchase-Conversion-Prediction"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-surface-2/70 px-3 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
+                aria-label="Open GitHub repository"
+                title="GitHub repository"
+              >
+                <Github className="h-4 w-4" />
+                <span>GitHub</span>
+              </a>
             </div>
             <div className="mt-4">
               <FeedbackWidget label="Was this prediction helpful?" placeholder="Share your feedback about the prediction result..." />
