@@ -906,7 +906,7 @@ def _preprocess_raw_lite(
 ) -> tuple[CartInputRaw, FeatureQuality]:
     """
     Derive the full CartInputRaw from a lite payload.
-    All derived fields use deterministic formulas.
+    All derived fields use smart inference formulas leveraging available inputs.
     """
     views = max(payload.user_total_views, 1.0)
     carts = payload.user_total_carts
@@ -916,14 +916,29 @@ def _preprocess_raw_lite(
     user_v2c = min(carts / views, 1.0)
     product_v2c = min(p_carts / p_views, 1.0)
 
-    # Estimated purchases: assume cart-to-purchase rate of 40% (mid-range default)
-    # Using a fixed ratio keeps results deterministic
+    # Smart cart-to-purchase rate: blend brand-specific with default
+    # 70% brand-specific rate + 30% baseline (0.4)
     DEFAULT_C2P = 0.4
-    user_purchases = round(carts * DEFAULT_C2P)
-    product_purchases = round(p_carts * DEFAULT_C2P)
+    c2p_rate = 0.3 * payload.brand_purchase_rate + 0.7 * DEFAULT_C2P
+    user_purchases = round(carts * c2p_rate)
+    product_purchases = round(p_carts * c2p_rate)
 
     user_c2p = min(user_purchases / max(carts, 1), 1.0)
     product_c2p = min(product_purchases / max(p_carts, 1), 1.0)
+
+    # Smart user_avg_purchase_price: use price_vs_user_avg ratio
+    # If price_vs_user_avg > 1, user typically buys cheaper items
+    user_avg_price = payload.price / max(payload.price_vs_user_avg, 0.5)
+
+    # Smart unique counts: factor in engagement level from activity_count
+    engagement_factor = min(payload.activity_count / 50, 1.5)
+    user_unique_products = max(1.0, carts * 0.5 * engagement_factor)
+    user_unique_categories = max(1.0, carts * 0.1 * engagement_factor)
+
+    # Smart product unique buyers: factor in product's view-to-cart conversion
+    # Higher v2c = more potential buyers
+    buyer_factor = 0.3 + product_v2c * 0.7  # range: 0.3 to 1.0
+    product_unique_buyers = max(1.0, p_carts * c2p_rate * buyer_factor)
 
     full = CartInputRaw(
         price=payload.price,
@@ -936,16 +951,16 @@ def _preprocess_raw_lite(
         user_total_purchases=float(user_purchases),
         user_view_to_cart_rate=user_v2c,
         user_cart_to_purchase_rate=user_c2p,
-        user_avg_purchase_price=payload.price,  # best single-item estimate
-        user_unique_products=max(1.0, carts * 0.5),  # conservative estimate
-        user_unique_categories=max(1.0, carts * 0.1),
+        user_avg_purchase_price=user_avg_price,
+        user_unique_products=user_unique_products,
+        user_unique_categories=user_unique_categories,
         product_total_events=p_views + p_carts + product_purchases,
         product_total_views=p_views,
         product_total_carts=p_carts,
         product_total_purchases=float(product_purchases),
         product_view_to_cart_rate=product_v2c,
         product_cart_to_purchase_rate=product_c2p,
-        product_unique_buyers=max(1.0, p_carts * DEFAULT_C2P),
+        product_unique_buyers=product_unique_buyers,
         brand_purchase_rate=payload.brand_purchase_rate,
         price_vs_user_avg=payload.price_vs_user_avg,
         price_vs_category_avg=payload.price_vs_category_avg,
