@@ -553,7 +553,7 @@ export const BatchCsvTab = () => {
                 ))}
               </div>
               <Magnetic intensity={0.18} range={60}>
-                <Button onClick={onUpload} disabled={!selectedFile || isLoading} variant="glow" size="lg" className="min-w-40">
+                <Button onClick={onUpload} disabled={!selectedFile || isLoading} variant="predict" size="lg" className="min-w-40">
                   {isLoading ? 'Uploading...' : 'Upload and Predict'}
                 </Button>
               </Magnetic>

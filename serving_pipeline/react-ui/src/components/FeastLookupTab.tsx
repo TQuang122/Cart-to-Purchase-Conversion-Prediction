@@ -371,7 +371,7 @@ export const FeastLookupTab = () => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" onClick={clearDraft} className="h-11">Clear Draft</Button>
-                  <Button type="submit" disabled={isLoading} variant="glow" size="lg" className="min-w-32">
+                  <Button type="submit" disabled={isLoading} variant="predict" size="lg" className="min-w-32">
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -18,7 +18,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, BarChart3, Database, Download, GitBranch, Home, Loader2, Network, Settings2, ShieldAlert, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, BarChart3, Database, Download, FileSpreadsheet, GitBranch, Home, Loader2, Maximize2, Network, RefreshCw, Settings2, ShieldAlert, SlidersHorizontal, X } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RainbowButton } from '@/components/ui/rainbow-button'
@@ -162,6 +162,7 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
 function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullLabel: string; value: number }[] }) {
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
   const [selectedBin, setSelectedBin] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const chartRef = useRef<HTMLDivElement>(null)
 
   const sortedData = useMemo(() => {
@@ -200,6 +201,19 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
     img.src = url
   }
 
+  const exportToCsv = () => {
+    const headers = ['Price Range', 'Volume']
+    const rows = data.map(d => [d.fullLabel, d.value])
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.download = 'price-distribution.csv'
+    link.href = url
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
       <Card className="dashboard-card panel-accent">
       <CardHeader className="pb-2">
@@ -214,8 +228,14 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
                   {sortOrder === 'asc' ? '↑' : '↓'}
                 </span>
               )}
+              <button onClick={exportToCsv} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Download CSV">
+                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+              </button>
               <button onClick={exportToPng} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Download PNG">
                 <Download className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button onClick={() => setIsFullscreen(true)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Fullscreen">
+                <Maximize2 className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
           </div>
@@ -287,6 +307,37 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
           )}
         </ChartMountGate>
       </CardContent>
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4" onClick={() => setIsFullscreen(false)}>
+          <div className="relative w-full max-w-5xl max-h-[90vh] bg-card rounded-xl border shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Price Distribution</h3>
+              <button onClick={() => setIsFullscreen(false)} className="p-2 rounded-md hover:bg-accent">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+              <ChartMountGate className="h-96">
+                {({ width, height }) => (
+                  <BarChart width={width} height={height} data={sortedData} margin={{ top: 8, right: 14, left: 0, bottom: 28 }}>
+                    <defs>
+                      <linearGradient id="priceHistogramGradientFS" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.45} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.45)" vertical={false} />
+                    <XAxis dataKey="axisLabel" tick={{ fontSize: 12, fill: 'hsl(var(--text-secondary))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} angle={-28} textAnchor="end" height={64} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--text-secondary))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} width={58} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={(value: unknown) => [`${Number(value).toLocaleString()} records`, 'Volume']} />
+                    <Bar dataKey="value" fill="url(#priceHistogramGradientFS)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                )}
+              </ChartMountGate>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
@@ -380,6 +431,16 @@ export function DatasetStatsPage() {
   const [lineage, setLineage] = useState<ModelLineageResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(() => {
+      window.location.reload()
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [autoRefresh])
 
   useEffect(() => {
     let ignore = false
@@ -616,10 +677,17 @@ export function DatasetStatsPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-[hsl(var(--border)/0.82)] bg-[hsl(var(--surface-1)/0.95)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-6 w-6 text-[hsl(var(--info))]" />
-            <h1 className="readable-title text-xl">Conversion Insights Dashboard</h1>
-          </div>
+<div className="flex items-center gap-3">
+              <BarChart3 className="h-6 w-6 text-[hsl(var(--info))]" />
+              <h1 className="readable-title text-xl">Conversion Insights Dashboard</h1>
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={cn("p-2 rounded-md transition-colors", autoRefresh ? "bg-green-100 text-green-700" : "hover:bg-accent text-muted-foreground")}
+                title={autoRefresh ? "Auto-refresh ON (5min)" : "Auto-refresh OFF"}
+              >
+                <RefreshCw className={cn("h-4 w-4", autoRefresh && "animate-spin")} />
+              </button>
+            </div>
           <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
             <Link to="/" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
               <Home className="h-4 w-4" />
