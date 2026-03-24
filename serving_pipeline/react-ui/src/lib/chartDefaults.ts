@@ -153,3 +153,10 @@ export const CHART_TOOLTIP_CONTENT_STYLE = {
   boxShadow: "0 22px 42px -26px rgba(2, 6, 23, 0.9)",
   fontSize: "12px",
 }
+
+export const CHART_ACTIVE_BAR_STYLE = {
+  fill: "hsl(var(--chart-1))",
+  filter: "brightness(1.15)",
+}
+
+export const CHART_ANIMATION_DURATION = 800

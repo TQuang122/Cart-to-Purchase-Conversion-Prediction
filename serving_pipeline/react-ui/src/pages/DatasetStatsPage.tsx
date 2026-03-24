@@ -23,7 +23,7 @@ import { AlertTriangle, BarChart3, Database, GitBranch, Home, Loader2, Network, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RainbowButton } from '@/components/ui/rainbow-button'
 import { resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
-import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
+import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE, CHART_ACTIVE_BAR_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
 import { HighlightText } from '@/components/ui/highlight-text'
 import { useAppContext } from '@/contexts/AppContext'
@@ -219,7 +219,7 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
                   fontSize: 10,
                 }}
               />
-              <Bar dataKey="value" fill="url(#priceHistogramGradient)" radius={[5, 5, 0, 0]} maxBarSize={52} />
+              <Bar dataKey="value" fill="url(#priceHistogramGradient)" radius={[5, 5, 0, 0]} maxBarSize={52} activeBar={CHART_ACTIVE_BAR_STYLE} />
             </BarChart>
           )}
         </ChartMountGate>
@@ -292,7 +292,7 @@ function HorizontalBarChartCard({
                 </>
               )}
               <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={tooltipFormatter} />
-              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} barSize={20} />
+              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} barSize={20} activeBar={CHART_ACTIVE_BAR_STYLE} />
             </BarChart>
           )}
         </ChartMountGate>
@@ -673,7 +673,7 @@ export function DatasetStatsPage() {
                         formatter={(value: unknown) => [formatRatioPercent(Number(value)), 'Conversion rate']}
                         labelFormatter={(label) => `Hour: ${label}h`}
                       />
-                      <Area type="monotone" dataKey="rate" stroke="hsl(var(--chart-2))" fill="url(#hourlyRateGradient)" strokeWidth={2.25} dot={{ r: 3.5 }} />
+                      <Area type="monotone" dataKey="rate" stroke="hsl(var(--chart-2))" fill="url(#hourlyRateGradient)" strokeWidth={2.25} dot={{ r: 3.5 }} activeDot={{ r: 6, fill: "hsl(var(--chart-2))", filter: "brightness(1.2)" }} />
                       <ReferenceDot
                         x={goldenHour.hour}
                         y={goldenHour.rate}
@@ -704,7 +704,7 @@ export function DatasetStatsPage() {
                       <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={tooltipFormatter} />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="hsl(var(--chart-3))">
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="hsl(var(--chart-3))" activeBar={CHART_ACTIVE_BAR_STYLE}>
                         <LabelList dataKey="value" position="top" className="fill-foreground text-[10px]" />
                       </Bar>
                     </BarChart>
@@ -806,7 +806,7 @@ export function DatasetStatsPage() {
                           return [`${pct.toFixed(2)}% • ${formatNumber(raw)} records`, 'Stage']
                         }}
                       />
-                      <Bar dataKey="pct_of_view" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} minPointSize={14}>
+                      <Bar dataKey="pct_of_view" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} minPointSize={14} activeBar={CHART_ACTIVE_BAR_STYLE}>
                         <LabelList
                           dataKey="value"
                           position="top"
@@ -847,7 +847,7 @@ export function DatasetStatsPage() {
                           return [`${formatRatioPercent(Number(value))} • Carts ${formatNumber(volume)} • Purchases ${formatNumber(purchases)} • Share ${(share * 100).toFixed(1)}%`, 'Conversion rate']
                         }}
                       />
-                      <Bar dataKey="rate" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]}>
+                      <Bar dataKey="rate" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]} activeBar={CHART_ACTIVE_BAR_STYLE}>
                         <LabelList
                           dataKey="rate"
                           position="right"
