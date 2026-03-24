@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Info, Lightbulb, Loader2, PanelRightClose, PanelRightOpen, Search, Settings2, ShoppingCart, Sparkles, Zap } from 'lucide-react'
-// import { Analytics } from '@vercel/analytics/react'
+import { Analytics } from '@vercel/analytics/react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
 import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
@@ -376,6 +376,7 @@ function App() {
         <Route path="/dashboard" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
         <Route path="/dataset" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <Analytics />
     </AnimatedToastProvider>
   )
 }
