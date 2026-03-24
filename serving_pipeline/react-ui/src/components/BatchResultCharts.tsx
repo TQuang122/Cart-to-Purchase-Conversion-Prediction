@@ -22,6 +22,7 @@ import {
   UNCERTAINTY_MARGIN,
   getDecisionThreshold,
 } from '@/lib/predictionConfidence'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 
 interface BatchResultChartsProps {
   results: CartPrediction[]
@@ -90,13 +91,6 @@ const hexToRgba = (hex: string, alpha: number) => {
   const g = (bigint >> 8) & 255
   const b = bigint & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-const CHART_TOOLTIP_CONTENT_STYLE: CSSProperties = {
-  backgroundColor: 'hsl(var(--card) / 0.96)',
-  border: '1px solid hsl(var(--border) / 0.72)',
-  borderRadius: '10px',
-  boxShadow: '0 14px 28px -20px rgba(2, 6, 23, 0.92)',
 }
 
 const CHART_TOOLTIP_LABEL_STYLE: CSSProperties = {

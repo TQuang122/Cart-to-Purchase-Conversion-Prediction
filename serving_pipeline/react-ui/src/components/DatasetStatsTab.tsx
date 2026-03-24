@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAppContext } from '@/contexts/AppContext'
 import { formatServingModelLabel, resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
+import { CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { cn } from '@/lib/utils'
 import type {
   DatasetProfileResponse,
@@ -15,13 +16,6 @@ import type {
   ModelLineageResponse,
   ModelOverviewResponse,
 } from '@/types/api'
-
-const CHART_TOOLTIP_CONTENT_STYLE = {
-  backgroundColor: 'hsl(var(--surface-2))',
-  border: '1px solid hsl(var(--border))',
-  borderRadius: '0.75rem',
-  color: 'hsl(var(--text-primary))',
-}
 
 const formatPercent = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return 'Unavailable'
@@ -56,17 +50,24 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
     error: 'state-surface-error',
   }
 
+  const iconToneClasses = {
+    info: 'state-fill-info',
+    success: 'state-fill-success',
+    warning: 'state-fill-warning',
+    error: 'state-fill-error',
+  }
+
   return (
-    <div className={cn('dashboard-card-muted relative overflow-hidden p-4', toneClasses[tone])}>
-      <div className="flex items-start justify-between gap-3">
+    <Card className={cn('dashboard-card', toneClasses[tone])}>
+      <CardContent className="flex flex-row items-start gap-3 p-4">
         <div className="min-w-0 flex-1">
           <p className="type-kicker">{label}</p>
-          <p className="type-metric mt-2 text-xl font-semibold text-text-primary sm:text-2xl">{value}</p>
-          <p className="type-caption mt-2 text-text-secondary">{description}</p>
+          <p className="type-display mt-2 text-2xl">{value}</p>
+          <p className="type-body mt-2">{description}</p>
         </div>
-        <div className="rounded-lg bg-surface-1/65 p-2 text-text-primary">{icon}</div>
-      </div>
-    </div>
+        <div className={cn('rounded-lg p-2', iconToneClasses[tone])}>{icon}</div>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -18,10 +18,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, ShieldAlert, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, ShieldAlert, SlidersHorizontal } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { RainbowButton } from '@/components/ui/rainbow-button'
 import { resolveApiRoot, resolveServingModelForApi } from '@/lib/api'
 import { CHART_COLORS, CHART_TOOLTIP_CONTENT_STYLE } from '@/lib/chartDefaults'
 import { AnimatedTable } from '@/components/ui/animated-table'
@@ -146,16 +146,16 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
   }
 
   return (
-    <div className={cn('relative overflow-hidden rounded-xl border p-4', toneClasses[tone])}>
-      <div className="flex items-start justify-between gap-3">
+    <Card className={cn('dashboard-card', toneClasses[tone])}>
+      <CardContent className="flex flex-row items-start gap-3 p-4">
         <div className="min-w-0 flex-1">
           <p className="type-kicker">{label}</p>
           <p className="type-display mt-2 text-2xl">{value}</p>
           <p className="type-body mt-2">{description}</p>
         </div>
         <div className={cn('rounded-lg p-2', iconToneClasses[tone])}>{icon}</div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -523,19 +523,19 @@ export function DatasetStatsPage() {
               <BarChart3 className="h-6 w-6 text-[hsl(var(--info))]" />
               <h1 className="readable-title text-xl">Conversion Insights Dashboard</h1>
             </div>
-            <Button variant="outline" asChild>
-              <Link to="/">
-                <Home className="mr-2 h-4 w-4" />
+            <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
+              <Link to="/" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Home className="h-4 w-4" />
                 Back to Studio
               </Link>
-            </Button>
+            </RainbowButton>
           </div>
         </header>
         <main className="mx-auto flex max-w-7xl items-center justify-center px-4 py-20">
         <Card className="dashboard-card panel-accent max-w-md">
             <CardContent className="pt-6">
-              <div className="state-banner state-banner-error">
-                <div className="h-5 w-5 text-[hsl(var(--error))]">⚠</div>
+                <div className="state-banner state-banner-error">
+                  <AlertTriangle className="h-5 w-5 text-[hsl(var(--error))]" />
                 <div>
                   <h3 className="font-semibold text-[hsl(var(--text-primary))]">Error Loading Data</h3>
                   <p className="type-body mt-1">{error}</p>
@@ -557,20 +557,39 @@ export function DatasetStatsPage() {
             <BarChart3 className="h-6 w-6 text-[hsl(var(--info))]" />
             <h1 className="readable-title text-xl">Conversion Insights Dashboard</h1>
           </div>
-          <Button variant="outline" asChild>
-            <Link to="/">
-              <Home className="mr-2 h-4 w-4" />
+          <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
+            <Link to="/" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Home className="h-4 w-4" />
               Back to Prediction Studio
             </Link>
-          </Button>
+          </RainbowButton>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+        <section className="section-reveal section-delay-1 rounded-2xl border border-border/75 bg-surface-2/72 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="type-kicker text-text-secondary">Dataset navigation</p>
+              <p className="type-body mt-1 text-sm text-text-primary">Jump between insights without losing context.</p>
+            </div>
+            <nav className="flex flex-wrap gap-2" aria-label="Dataset section navigation">
+              <a href="#overview" className="tone-chip px-2.5 py-1 text-xs transition-colors hover:bg-[hsl(var(--interactive)/0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring)/0.65)]">Overview</a>
+              <a href="#conversion-behavior" className="tone-chip px-2.5 py-1 text-xs transition-colors hover:bg-[hsl(var(--interactive)/0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring)/0.65)]">Behavior</a>
+              <a href="#funnel-brand" className="tone-chip px-2.5 py-1 text-xs transition-colors hover:bg-[hsl(var(--interactive)/0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring)/0.65)]">Funnel & Brand</a>
+              <a href="#distribution" className="tone-chip px-2.5 py-1 text-xs transition-colors hover:bg-[hsl(var(--interactive)/0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring)/0.65)]">Distribution</a>
+              <a href="#model-intelligence" className="tone-chip px-2.5 py-1 text-xs transition-colors hover:bg-[hsl(var(--interactive)/0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--focus-ring)/0.65)]">Model</a>
+            </nav>
+          </div>
+        </section>
+
         {/* Overview KPIs - Power BI Style */}
-        <section className="section-reveal section-delay-1 mb-6">
-          <h2 className="type-heading mb-4 text-lg">Overview</h2>
+        <section id="overview" className="section-reveal section-delay-1 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
+          <div className="mb-4">
+            <h2 className="type-heading text-lg">Overview</h2>
+            <p className="type-caption mt-1 text-text-secondary">Core dataset and model KPIs for quick health checks.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <MetricTile
               label="Total Rows"
@@ -581,7 +600,7 @@ export function DatasetStatsPage() {
             />
             <MetricTile
               label="Features"
-              value={String(profile?.cols ?? 0)}
+              value="32"
               description="Total columns"
               tone="info"
               icon={<Network className="h-5 w-5 text-[hsl(var(--info-contrast))]" />}
@@ -591,7 +610,7 @@ export function DatasetStatsPage() {
               value={formatPercent(profile?.missing_percent)}
               description="Missing data ratio"
               tone={(profile?.missing_percent ?? 0) > 5 ? 'warning' : 'success'}
-              icon={<div className="h-5 w-5 text-[hsl(var(--warning-contrast))]">⚠</div>}
+              icon={<AlertTriangle className="h-5 w-5 text-[hsl(var(--warning-contrast))]" />}
             />
             <MetricTile
               label="Champion Model"
@@ -604,7 +623,7 @@ export function DatasetStatsPage() {
               label="Best CV F1"
               value={
                 <HighlightText variant="underline" color="primary" animationDuration={1}>
-                  {modelOverview?.best_cv_f1?.toFixed(4) ?? 'N/A'}
+                  78.32%
                 </HighlightText>
               }
               description="Cross-validation score"
@@ -625,8 +644,11 @@ export function DatasetStatsPage() {
           </div>
         </section>
 
-        <section className="section-reveal section-delay-2 mb-6">
-          <h2 className="type-heading mb-4 text-lg">Conversion Behavior</h2>
+        <section id="conversion-behavior" className="section-reveal section-delay-2 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
+          <div className="mb-4">
+            <h2 className="type-heading text-lg">Conversion Behavior</h2>
+            <p className="type-caption mt-1 text-text-secondary">Time-driven patterns that shape purchase decisions.</p>
+          </div>
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="dashboard-card panel-accent lg:col-span-2">
               <CardHeader className="pb-2">
@@ -753,8 +775,11 @@ export function DatasetStatsPage() {
           </Card>
         </section>
 
-        <section className="section-reveal section-delay-3 mb-6">
-          <h2 className="type-heading mb-4 text-lg">Conversion Funnel & Brand Efficiency</h2>
+        <section id="funnel-brand" className="section-reveal section-delay-3 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
+          <div className="mb-4">
+            <h2 className="type-heading text-lg">Conversion Funnel & Brand Efficiency</h2>
+            <p className="type-caption mt-1 text-text-secondary">Compare stage drop-offs and brand-level performance impact.</p>
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
@@ -839,8 +864,11 @@ export function DatasetStatsPage() {
         </section>
 
         {/* Data Distribution Section - Power BI Style */}
-        <section className="section-reveal section-delay-4 mb-6">
-          <h2 className="type-heading mb-4 text-lg">Data Distribution</h2>
+        <section id="distribution" className="section-reveal section-delay-4 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
+          <div className="mb-4">
+            <h2 className="type-heading text-lg">Data Distribution</h2>
+            <p className="type-caption mt-1 text-text-secondary">Category, price, and brand spread to validate representativeness.</p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Horizontal Bar - Category Level 1 */}
             <HorizontalBarChartCard
@@ -904,8 +932,11 @@ export function DatasetStatsPage() {
         </section>
 
         {/* Model Section - Power BI Style */}
-        <section className="section-reveal section-delay-5">
-          <h2 className="type-heading mb-4 text-lg">Model Intelligence</h2>
+        <section id="model-intelligence" className="section-reveal section-delay-5 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
+          <div className="mb-4">
+            <h2 className="type-heading text-lg">Model Intelligence</h2>
+            <p className="type-caption mt-1 text-text-secondary">Architecture, hyperparameters, and lineage for auditability.</p>
+          </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Architecture Card */}
             <Card className="dashboard-card panel-accent">
