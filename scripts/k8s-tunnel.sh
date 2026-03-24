@@ -220,6 +220,7 @@ check_public_health() {
 
 watchdog_loop() {
   local failures=0
+  local last_url=""
   log_watchdog "INFO" "watchdog started (interval=${WATCHDOG_INTERVAL_SECONDS}s, threshold=${WATCHDOG_FAILURE_THRESHOLD})"
 
   while true; do
@@ -262,7 +263,18 @@ watchdog_loop() {
       start_pf
       start_tunnel
       failures=0
+      last_url=""
       log_watchdog "INFO" "auto-heal completed"
+    fi
+
+    if [[ "${AUTO_UPDATE_VERCEL}" == "true" ]]; then
+      local current_url
+      current_url="$(extract_url)"
+      if [[ -n "${current_url}" && "${current_url}" != "${last_url}" ]]; then
+        log_watchdog "INFO" "tunnel URL changed: ${last_url} -> ${current_url}"
+        maybe_sync_vercel "${current_url}"
+        last_url="${current_url}"
+      fi
     fi
 
     sleep "${WATCHDOG_INTERVAL_SECONDS}"
@@ -399,8 +411,21 @@ case "${1:-start}" in
     sync_vercel_env "${url}"
     printf '%s' "${url}" >"${LAST_URL_FILE}"
     ;;
+  check-url)
+    url="$(extract_url)"
+    if [[ -z "${url}" ]]; then
+      echo "No tunnel URL found"
+      exit 1
+    fi
+    echo "Current URL: ${url}"
+    if curl -fsS --max-time 8 "${url}/health" >/dev/null 2>&1; then
+      echo "Status: HEALTHY"
+    else
+      echo "Status: UNHEALTHY"
+    fi
+    ;;
   *)
-    echo "Usage: $0 {start|stop|restart|status|logs|sync-vercel|daemon-start|daemon-stop|daemon-status}"
+    echo "Usage: $0 {start|stop|restart|status|logs|sync-vercel|check-url|daemon-start|daemon-stop|daemon-status}"
     echo ""
     echo "Optional env vars:"
     echo "  AUTO_UPDATE_VERCEL=true          # auto sync on start/restart when URL changes"

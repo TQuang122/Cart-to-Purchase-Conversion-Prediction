@@ -36,6 +36,19 @@ const getRuntimeApiRootOverride = (): string | null => {
 }
 
 const resolveDefaultApiRoot = (): string => {
+  // In production, ONLY use VITE_API_BASE_URL - ignore any localStorage/query overrides
+  // This prevents stale tunnel URLs from breaking the production app
+  if (import.meta.env.PROD) {
+    const envBase = import.meta.env.VITE_API_BASE_URL?.trim()
+    if (envBase) return normalizeApiRoot(envBase)
+
+    console.error(
+      '[api] FATAL: VITE_API_BASE_URL is not set in production. API calls will fail.'
+    )
+    return ''
+  }
+
+  // Development mode: allow runtime overrides via localStorage or ?api= query param
   const runtimeOverride = getRuntimeApiRootOverride()
   if (runtimeOverride) return runtimeOverride
 
@@ -51,12 +64,6 @@ const resolveDefaultApiRoot = (): string => {
     hostname.endsWith('.local')
 
   if (isLocalHost) return LOCAL_API_ROOT
-
-  if (import.meta.env.PROD) {
-    console.warn(
-      '[api] VITE_API_BASE_URL is not set in production; falling back to same-origin API root.'
-    )
-  }
 
   return origin
 }

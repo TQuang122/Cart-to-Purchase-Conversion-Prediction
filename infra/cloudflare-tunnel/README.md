@@ -1,188 +1,142 @@
 # Cloudflare Tunnel Setup
 
-Exposes local FastAPI backend to the internet via Cloudflare Tunnel — no static IP, no port forwarding, free. Works without a Cloudflare account.
+Exposes local K8s serving API to the internet via Cloudflare Tunnel — no static IP, no port forwarding, free.
 
-## Prerequisites
+## Quick Start (Recommended)
 
-```bash
-# Install cloudflared
-brew install cloudflared              # macOS
-# or: curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-#          -o /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
-```
-
-## Quick Start
-
-### 1. Start local infrastructure
+Use the unified `k8s-tunnel.sh` script in `scripts/`:
 
 ```bash
-# Start MLflow, MinIO, Kafka, Airflow, MySQL
-./infra/docker/run.sh up
+# Start tunnel with auto-sync to Vercel
+AUTO_UPDATE_VERCEL=true scripts/k8s-tunnel.sh start
 
-# Wait ~30s for services to be ready
+# Or run as daemon (auto-restart + auto-sync on URL change)
+AUTO_UPDATE_VERCEL=true scripts/k8s-tunnel.sh daemon-start
 ```
 
-### 2. Start FastAPI backend
+### Available Commands
+
+
+| Command | Description |
+|---------|-------------|
+| `start` | Start port-forward + tunnel |
+| `stop`  | Stop all processes |
+| `restart` | Restart tunnel |
+| `status` | Show current status + health |
+| `logs` | Show tunnel logs |
+| `check-url` | Show current URL + health |
+| `sync-vercel` | Manually sync URL to Vercel |
+| `daemon-start` | Start watchdog daemon |
+| `daemon-stop` | Stop watchdog daemon |
+| `daemon-status` | Show daemon status |
+
+### Environment Variables
 
 ```bash
-cd serving_pipeline
-conda activate propensity_mlops   # or: source .venv/bin/activate
-uvicorn api.main:app --host 127.0.0.1 --port 8000
-```
+# Auto-sync tunnel URL to Vercel on change
+AUTO_UPDATE_VERCEL=true
 
-You should see:
-```
-Uvicorn running on http://127.0.0.1:8000
-[predict] Loaded xgboost from .../models/xgboost_model.joblib
-```
+# Which Vercel environments to update
+VERCEL_TARGET_ENVS=production,development
 
-### 3. Start Cloudflare Tunnel
+# Trigger production redeploy after sync
+VERCEL_REDEPLOY=true
 
-```bash
-chmod +x infra/cloudflare-tunnel/start-tunnel.sh
-./infra/cloudflare-tunnel/start-tunnel.sh 8000
-```
-
-After ~10 seconds, you'll see:
-```
-TUNNEL ACTIVE!
-API URL: https://abc123.trycloudflare.com
-```
-
-### 4. Use the tunnel URL
-
-**For local frontend development:**
-
-```bash
-cd serving_pipeline/react-ui
-echo "VITE_API_BASE_URL=https://abc123.trycloudflare.com" > .env.local
-npm run dev
-```
-
-**For Vercel deployment:**
-
-```bash
-cd serving_pipeline/react-ui
-vercel env add VITE_API_BASE_URL
-# Enter: https://abc123.trycloudflare.com
-vercel --prod
+# Watchdog settings
+WATCHDOG_INTERVAL_SECONDS=15    # Check frequency
+WATCHDOG_FAILURE_THRESHOLD=2    # Failures before auto-heal
+WATCHDOG_CHECK_PUBLIC=false     # Check public health
 ```
 
 ## How It Works
 
 ```
-Browser ←── HTTPS ──→ Cloudflare CDN ←──→ cloudflared tunnel ←──→ localhost:8000 (FastAPI)
-                                       ↑
-                                   Your machine
+Vercel (Frontend) ── HTTPS ──→ Cloudflare CDN ──→ cloudflared ──→ K8s port-forward ──→ serving-api
+                                                                                    ↑
+                                                                              localhost:18000
 ```
 
-- Cloudflare handles HTTPS (automatic, free)
-- Tunnel URL changes each restart (ephemeral)
-- Bandwidth: unlimited, free
-- Latency: adds ~50-100ms overhead
+- **Ephemeral URL**: `https://*.trycloudflare.com` (changes on restart)
+- **Auto-sync**: Detects URL changes and updates Vercel env automatically
+- **Watchdog**: Monitors health and auto-restarts if tunnel fails
 
-## Persistent URL (Optional)
+## Production Frontend (Vercel)
 
-If you want a fixed URL, create a free Cloudflare account:
+The production frontend is configured to **only** use `VITE_API_BASE_URL` from environment variables — localStorage overrides are ignored in production. This prevents stale tunnel URLs from breaking the app.
 
-1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com)
-2. Download `cloudflared` and authenticate:
-   ```bash
-   cloudflared tunnel login
+### Setup
+
+1. Set `VITE_API_BASE_URL` in Vercel Project Settings → Environment Variables:
    ```
-3. Create a named tunnel:
-   ```bash
-   cloudflared tunnel create ctp-api
+   VITE_API_BASE_URL=https://your-tunnel-url.trycloudflare.com
    ```
-4. Run the tunnel:
+
+2. Deploy frontend:
    ```bash
-   cloudflared tunnel run ctp-api --url http://localhost:8000
+   cd serving_pipeline/react-ui
+   vercel --prod
    ```
-5. Create DNS CNAME record: `api.yourdomain.com` → `ctp-api.cftr.io`
 
-## API Endpoints
-
-Once tunnel is active, these are available:
-
-| Method | Endpoint                          | Description                        |
-|--------|----------------------------------|------------------------------------|
-| GET    | `/health`                         | Health check                       |
-| GET    | `/predict/stats`                  | Model stats & health               |
-| POST   | `/predict/raw-lite`               | Predict with 13 features           |
-| POST   | `/predict/raw`                    | Predict with 26 features (full)    |
-| POST   | `/predict/feast`                 | Predict by user_id + product_id    |
-| POST   | `/predict/raw/batch`             | Batch predict (JSON array)         |
-| POST   | `/predict/raw/batch/upload`      | Batch predict (CSV upload)         |
-| GET    | `/dataset/stats`                  | Dataset statistics                  |
-| GET    | `/dataset/schema`                 | Dataset schema                      |
-| GET    | `/model/info`                    | Model metadata                     |
+3. Start tunnel with auto-sync:
+   ```bash
+   AUTO_UPDATE_VERCEL=true VERCEL_TARGET_ENVS=production scripts/k8s-tunnel.sh start
+   ```
 
 ## Troubleshooting
 
-**"Tunnel URL not detected"**
-- Wait 15 seconds — tunnel needs time to initialize
-- Check `$LOGFILE` (default: `/tmp/cloudflare-tunnel-ctp.log`)
+**"ERR_NAME_NOT_RESOLVED"**
+- Tunnel URL expired. Run `scripts/k8s-tunnel.sh restart`
 
-**"Connection refused" on tunnel URL**
-- Make sure FastAPI is running on the correct port (default: 8000)
-- Check: `curl http://127.0.0.1:8000/health`
+**"No CORS headers"**
+- Backend CORS is correct. This error usually means the tunnel URL is stale/dead
+- Check: `scripts/k8s-tunnel.sh check-url`
 
-**502 Bad Gateway**
-- Cloudflare can't reach your local server
-- Check firewall: allow outbound port 443
+**Vercel shows old URL errors**
+- Run: `scripts/k8s-tunnel.sh sync-vercel`
+- Then redeploy in Vercel dashboard
 
-**"cloudflared not found"**
-- Install: `brew install cloudflared`
-- Verify: `cloudflared --version`
+**Frontend works locally but fails in production**
+- Verify `VITE_API_BASE_URL` is set in Vercel env vars
+- Check browser DevTools → Network tab to see which URL is being called
 
-**Frontend shows CORS errors**
-- The backend CORS is configured from `CORS_ORIGINS` and `CORS_ORIGIN_REGEX`
-- For production, set `CORS_ORIGINS` and optionally `CORS_ORIGIN_REGEX`
+## API Endpoints
 
-**Vercel page shows "Request Access"**
-- This is Vercel deployment protection, not backend CORS
-- Disable/adjust access controls in Vercel project Deployment Protection settings
+Once tunnel is active:
 
-## Stopping the Tunnel
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/predict/stats` | Model stats |
+| POST | `/predict/raw-lite` | Predict (13 features) |
+| POST | `/predict/raw` | Predict (26 features) |
+| POST | `/predict/feast` | Predict by user_id + product_id |
+| POST | `/predict/raw/batch` | Batch predict |
+| GET | `/dataset/profile` | Dataset profile |
+| GET | `/model/overview` | Model metadata |
 
-```bash
-# Press Ctrl+C in the tunnel terminal
-
-# Or kill by PID:
-if [ -s "/tmp/cloudflare-tunnel-ctp.pid" ]; then
-  kill "$(cat /tmp/cloudflare-tunnel-ctp.pid)" 2>/dev/null || true
-  rm -f /tmp/cloudflare-tunnel-ctp.pid
-fi
-```
-
-## Architecture Summary
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Vercel (Frontend)  OR  Local Browser (npm run dev)    │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTPS
-                      ▼
-              Cloudflare CDN (free TLS)
-                      │
-                      ▼
-            cloudflared tunnel
-          (cloudflared daemon)
-                      │
-                      │ localhost
-                      ▼
-          FastAPI (uvicorn :8000)
-          ├── /predict/* — ML model inference
-          ├── /dataset/* — dataset info
-          └── /model/*   — model metadata
-                      │
-                      │ localhost
-                      ▼
-          ┌────────── infrastructure ──────────┐
-          │ MLflow (port 5000)               │
-          │ MinIO (port 9000/9001)           │
-          │ MySQL (port 3306)                │
-          │ Kafka (port 9092)                 │
-          │ Airflow (port 8090)               │
-          └───────────────────────────────────┘
+┌────────────────────────────────────────────────┐
+│  Vercel (Frontend)  │  Local Dev (npm run dev) │
+└──────────┬──────────┴──────────┬───────────────┘
+           │                     │
+           │ HTTPS               │ HTTP
+           ▼                     ▼
+    ┌──────────────┐      ┌──────────────┐
+    │ Cloudflare   │      │ 127.0.0.1    │
+    │ CDN + Tunnel │      │ :18000       │
+    └──────┬───────┘      └──────┬───────┘
+           │                      │
+           │              ┌───────▼───────┐
+           │              │ kubectl       │
+           │              │ port-forward  │
+           │              └──────┬────────┘
+           │                     │
+           └───────────► ────────▼────────
+                              │
+                       ┌──────▼──────┐
+                       │ serving-api │
+                       │ (K8s pod)   │
+                       └─────────────┘
 ```
