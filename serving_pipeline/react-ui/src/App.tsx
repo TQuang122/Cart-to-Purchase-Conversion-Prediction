@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Info, Lightbulb, Loader2, PanelRightClose, PanelRightOpen, Search, Settings2, ShoppingCart, Sparkles, Zap } from 'lucide-react'
-import { Analytics } from '@vercel/analytics/react'
+// import { Analytics } from '@vercel/analytics/react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
 import { ProjectIntroOverlay } from '@/components/ProjectIntroOverlay'
@@ -219,7 +219,6 @@ function App() {
 
   const workspaceElement = (
     <>
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface-1 focus:px-3 focus:py-2 focus:text-sm focus:text-text-primary focus:outline-none focus:ring-2 focus:ring-[hsl(var(--focus-ring)/0.65)]">Skip to main</a>
       <MeshGradient mode={calmMode ? 'calm' : 'dynamic'} />
       <main id="main-content" tabIndex={-1} className="relative min-h-screen">
         <div className="mx-auto w-full max-w-[1440px] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8">
