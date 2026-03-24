@@ -32,12 +32,15 @@ interface TabConfig {
   label: string
   icon: React.ReactNode
   description: string
+  shortcut?: string
+  gradient: string
+  iconBg: string
 }
 
 const tabs: TabConfig[] = [
-  { id: 'raw', label: 'Raw Features', icon: <Database className="h-5 w-5" />, description: 'Enter features manually for single prediction' },
-  { id: 'batch', label: 'Batch CSV', icon: <FileSpreadsheet className="h-5 w-5" />, description: 'Upload CSV file for bulk predictions' },
-  { id: 'feast', label: 'Feast Lookup', icon: <Search className="h-5 w-5" />, description: 'Query features from Feast feature store' },
+  { id: 'raw', label: 'Raw Features', icon: <Database className="h-5 w-5" />, description: 'Enter features manually for single prediction', shortcut: '⌘1', gradient: 'from-blue-500 to-cyan-400', iconBg: 'bg-blue-500/20 text-blue-400' },
+  { id: 'batch', label: 'Batch CSV', icon: <FileSpreadsheet className="h-5 w-5" />, description: 'Upload CSV file for bulk predictions', shortcut: '⌘2', gradient: 'from-emerald-500 to-green-400', iconBg: 'bg-emerald-500/20 text-emerald-400' },
+  { id: 'feast', label: 'Feast Lookup', icon: <Search className="h-5 w-5" />, description: 'Query features from Feast feature store', shortcut: '⌘3', gradient: 'from-purple-500 to-pink-400', iconBg: 'bg-purple-500/20 text-purple-400' },
 ]
 
 const isTabValue = (value: string): value is TabValue => value === 'raw' || value === 'batch' || value === 'feast'
@@ -267,18 +270,27 @@ function App() {
             <div className={`grid grid-cols-1 gap-4 ${isSideRailOpen ? 'lg:grid-cols-[252px_minmax(0,1fr)_292px]' : 'lg:grid-cols-[252px_minmax(0,1fr)]'}`}>
               <nav className="dashboard-card-scale-sm rounded-2xl border border-border/80 bg-surface-2/90 p-2" aria-label="Prediction methods">
                 <div className="flex flex-col gap-2" role="tablist">
-                  {tabs.map((tab) => (
-                    <button key={tab.id} type="button" onClick={() => handleTabChange(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, tabs.findIndex(t => t.id === tab.id))} role="tab" aria-selected={activeTab === tab.id} className={`group relative w-full overflow-hidden rounded-xl border px-3 py-3 text-left transition-all hover:-translate-y-0.5 ${activeTab === tab.id ? 'interactive-border bg-[hsl(var(--interactive)/0.12)]' : 'border-border/76 bg-surface-2/96 hover:border-[hsl(var(--interactive)/0.48)]'}`}>
-                      <div className={`absolute left-0 top-0 h-full w-1 ${activeTab === tab.id ? 'bg-[hsl(var(--interactive-hover))]' : 'opacity-0 group-hover:opacity-60'}`} />
-                      <div className="flex items-start gap-3">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${activeTab === tab.id ? 'border-[hsl(var(--interactive)/0.45)] bg-[hsl(var(--interactive)/0.25)] text-[hsl(var(--success-contrast))]' : 'border-border/78 bg-surface-2 text-text-secondary group-hover:border-[hsl(var(--interactive)/0.42)]'}`}>{tab.icon}</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between"><span className="type-heading text-sm font-semibold text-text-primary">{tab.label}</span><ChevronRight className={`h-3.5 w-3.5 ${activeTab === tab.id ? 'translate-x-0 text-[hsl(var(--interactive-hover))]' : '-translate-x-1 opacity-25 group-hover:translate-x-0'}`} /></div>
-                          <p className="type-caption mt-1 line-clamp-2 text-text-secondary">{tab.description}</p>
+                  {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id
+                    return (
+                      <button key={tab.id} type="button" onClick={() => handleTabChange(tab.id)} onKeyDown={(e) => handleTabKeyDown(e, tabs.findIndex(t => t.id === tab.id))} role="tab" aria-selected={isActive} className={`group relative w-full overflow-hidden rounded-xl border px-3 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${isActive ? 'interactive-border bg-gradient-to-r from-blue-500/5 to-cyan-400/5 border-transparent' : 'border-border/76 bg-surface-2/96 hover:border-[hsl(var(--interactive)/0.48)]'}`}>
+                        <div className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${isActive ? tab.gradient : ''} ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`} />
+                        <div className="flex items-start gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isActive ? tab.iconBg : 'border border-border/78 bg-surface-2 text-text-secondary group-hover:border-[hsl(var(--interactive)/0.42)] group-hover:text-[hsl(var(--interactive))]'}`}>{tab.icon}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className={`type-heading text-sm font-semibold ${isActive ? `bg-gradient-to-r ${tab.gradient} bg-clip-text text-transparent` : 'text-text-primary'}`}>{tab.label}</span>
+                              <div className="flex items-center gap-2">
+                                {tab.shortcut && <kbd className="hidden rounded border border-border/60 bg-surface-2/60 px-1.5 py-0.5 text-[10px] font-medium text-text-secondary sm:inline-flex">{tab.shortcut}</kbd>}
+                                <ChevronRight className={`h-3.5 w-3.5 ${isActive ? 'translate-x-0 text-[hsl(var(--interactive-hover))]' : '-translate-x-1 opacity-25 group-hover:translate-x-0'}`} />
+                              </div>
+                            </div>
+                            <p className="type-caption mt-1 line-clamp-2 text-text-secondary">{tab.description}</p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    )
+                  })}
                 </div>
               </nav>
               <div>
