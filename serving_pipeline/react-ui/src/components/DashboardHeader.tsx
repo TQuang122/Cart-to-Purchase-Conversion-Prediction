@@ -191,12 +191,12 @@ export function DashboardHeader({
   const thresholdLabel = `${(clampedThreshold * 100).toFixed(1)}%`
   const thresholdExplainer = useMemo(() => {
     if (clampedThreshold < THRESHOLD_PRESETS.LOW.max) {
-      return 'Low threshold: captures more potential buyers, but may increase false positives.'
+      return { text: 'More predictions, lower confidence', risk: 'May include false positives' }
     }
     if (clampedThreshold <= THRESHOLD_PRESETS.HIGH.min) {
-      return 'Balanced threshold: keeps a practical tradeoff between reach and precision.'
+      return { text: 'Balanced precision & recall', risk: 'Recommended for production' }
     }
-    return 'High threshold: improves precision, but may miss borderline purchase intent.'
+    return { text: 'Fewer, high-confidence predictions', risk: 'May miss borderline cases' }
   }, [clampedThreshold])
 
   const activeThresholdPreset: ThresholdPresetId = useMemo(() => {
@@ -287,7 +287,8 @@ export function DashboardHeader({
                   />
                 </AnimatedTooltip>
               </div>
-              <p className="type-caption mt-1">{thresholdExplainer}</p>
+              <p className="type-caption mt-1">{thresholdExplainer.text}</p>
+              <p className="type-caption mt-0.5 text-amber-600 dark:text-amber-400">{thresholdExplainer.risk}</p>
             </div>
 
             <div className="dashboard-card-muted dashboard-card-scale-sm rounded-xl p-3">
@@ -367,7 +368,8 @@ export function DashboardHeader({
                 aria-label="Decision threshold"
                 aria-valuetext={thresholdLabel}
               />
-              <p className="type-caption mt-1">{thresholdExplainer}</p>
+              <p className="type-caption mt-1">{thresholdExplainer.text}</p>
+              <p className="type-caption mt-0.5 text-amber-600 dark:text-amber-400">{thresholdExplainer.risk}</p>
             </div>
             <button onClick={onOpenIntro} className="rounded-lg border border-border/60 bg-surface-2/70 p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background" title="About this project" aria-label="Open project introduction">
               <Info className="h-4 w-4" />
