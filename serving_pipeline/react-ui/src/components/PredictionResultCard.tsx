@@ -134,24 +134,65 @@ export const PredictionResultCard = ({
   }, [percentage])
 
   const insights = useMemo(() => {
-    if (prediction.explainability?.notes?.length) {
-      return prediction.explainability.notes
+    const contextLabel = context === 'raw' ? 'manual-input scenario' : 'Feast online-feature scenario'
+    const gapPoints = Math.abs(thresholdGap * 100)
+    const gapSummary = thresholdGap >= 0
+      ? `+${gapPoints.toFixed(1)} pts above threshold`
+      : `${gapPoints.toFixed(1)} pts below threshold`
+
+    const topSignals = [...confidenceSignals].sort((a, b) => b.strength - a.strength)
+    const strongestSignal = topSignals[0]
+    const strongestNegativeSignal = topSignals.find((signal) => signal.impact === 'negative')
+
+    const outcomeLine = `Outcome: ${resultTheme.title} at ${percentage}% (${gapSummary}).`
+
+    const whyLine = strongestSignal
+      ? `Why: Top driver is ${strongestSignal.label} (${strongestSignal.impact} impact, ${(strongestSignal.strength * 100).toFixed(0)}% strength).`
+      : `Why: Confidence is ${confidence.toLowerCase()} for this ${contextLabel}.`
+
+    let actionLine = 'Next: Run one comparison scenario to validate how probability shifts before acting.'
+
+    if (thresholdGap >= 8 / 100 && prediction.is_purchased === 1) {
+      actionLine = 'Next: Prioritize this segment for immediate conversion actions (retargeting or faster checkout nudges).'
+    } else if (thresholdGap >= 0 && confidence === 'Medium') {
+      actionLine = 'Next: Keep this segment in the campaign, but validate with a quick A/B check on pricing or offer copy.'
+    } else if (thresholdGap < 0 && confidence !== 'High') {
+      actionLine = 'Next: Test a stronger incentive or product-message adjustment before suppressing this segment.'
+    } else if (thresholdGap < 0 && strongestNegativeSignal) {
+      actionLine = `Next: Investigate ${strongestNegativeSignal.label} first; it is the main drag on purchase likelihood.`
     }
 
-    const contextLabel = context === 'raw' ? 'manual input pattern' : 'feast online features'
-    const insightLines = [`Model confidence is ${confidence.toLowerCase()} for this ${contextLabel}.`]
+    const notes = prediction.explainability?.notes ?? []
+    const modelNote = notes
+      .map((note) => note.replace(/\s*Response level:\s*top\.?/i, '').trim())
+      .find((note) => note.length > 0)
 
-    if (percentage >= 75) {
-      insightLines.push('Strong conversion signal detected - good candidate for immediate targeting.')
-    } else if (percentage >= 45) {
-      insightLines.push('Borderline intent - consider incentive or follow-up nudges before checkout.')
-    } else {
-      insightLines.push('Weak conversion signal - optimize messaging or pricing before next action.')
+    const insightLines = [outcomeLine, whyLine, actionLine]
+    if (modelNote) {
+      insightLines.push(`Model note: ${modelNote}`)
     }
 
-    insightLines.push('Run another scenario to compare how probability shifts with different inputs.')
     return insightLines
-  }, [confidence, context, percentage, prediction.explainability])
+  }, [confidence, confidenceSignals, context, percentage, prediction.explainability?.notes, prediction.is_purchased, resultTheme.title, thresholdGap])
+
+  const insightItems = useMemo(() => {
+    return insights.map((line) => {
+      const matched = line.match(/^([^:]+):\s*(.*)$/)
+      const label = (matched?.[1] ?? 'Insight').trim()
+      const message = (matched?.[2] ?? line).trim()
+      const key = label.toLowerCase()
+
+      const tone = key.startsWith('outcome')
+        ? 'state-badge-success'
+        : key.startsWith('why')
+          ? 'state-badge-info'
+          : key.startsWith('next')
+            ? 'state-badge-warning'
+            : 'state-badge-info'
+
+      return { label, message, tone }
+    })
+  }, [insights])
 
   const signalStyles = {
     positive: {
@@ -239,9 +280,11 @@ export const PredictionResultCard = ({
                 style={{ transition: 'stroke-dashoffset 200ms linear' }}
               />
             </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-[2rem] font-bold leading-none tabular-nums text-foreground">{animatedPercentage}%</span>
-              <span className="type-caption mt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Probability</span>
+            <div className="absolute inset-0 flex -translate-y-[2px] flex-col items-center justify-center">
+              <span className="font-mono text-[1.95rem] font-bold leading-none tabular-nums text-foreground">{animatedPercentage}%</span>
+              <span className="type-caption mt-2 rounded-full bg-background/80 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+                Score
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/65 px-2.5 py-1">
@@ -361,11 +404,18 @@ export const PredictionResultCard = ({
               </span>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="space-y-1.5 text-xs text-muted-foreground sm:text-sm">
-                {insights.map((line) => (
-                  <li key={line}>- {line}</li>
+              <div className="mt-2 space-y-2">
+                {insightItems.map((item) => (
+                  <div key={`${item.label}-${item.message}`} className="rounded-lg border border-border/55 bg-background/40 p-3">
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase', item.tone)}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <p className="type-body text-sm text-text-primary">{item.message}</p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </CollapsibleContent>
           </Collapsible>
 
