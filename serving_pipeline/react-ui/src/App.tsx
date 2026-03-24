@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Info, Lightbulb, Loader2, PanelRightClose, PanelRightOpen, Search, Settings2, ShoppingCart, Sparkles, Zap } from 'lucide-react'
 import { Analytics } from '@vercel/analytics/react'
 
 import { DashboardHeader, type StatsData } from '@/components/DashboardHeader'
@@ -154,10 +154,63 @@ function App() {
     feast: 'Confirm entity + event timestamp to avoid feature-store misses.',
   }
 
+  const modelColors: Record<string, string> = {
+    xgboost: 'from-orange-500 to-red-500',
+    lightgbm: 'from-green-400 to-emerald-600',
+    catboost: 'from-blue-400 to-indigo-600',
+    tabicl: 'from-purple-400 to-pink-500',
+  }
+  const modelGradient = modelColors[state.selectedModel] || 'from-gray-400 to-gray-600'
+
   const sideRailContent = (
     <div className="space-y-3">
-      <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Context</CardTitle></CardHeader><CardContent className="pt-4 space-y-4"><div><p className="type-kicker">Model</p><p className="type-body mt-1 font-medium">{formatServingModelLabel(state.selectedModel)}</p></div><div><p className="type-kicker">Threshold</p><p className="type-body mt-1 font-medium">{state.selectedThreshold}</p></div><div><p className="type-kicker">Hint</p><p className="type-body mt-1 text-text-secondary">{primaryHint[activeTab]}</p></div></CardContent></Card>
-      <Card><CardHeader className="border-b border-border/78 pb-3"><CardTitle className="text-base">Controls</CardTitle></CardHeader><CardContent className="pt-4"><button type="button" onClick={handleOpenIntro} className="type-body w-full rounded-lg border border-border/80 bg-surface-2/80 px-3 py-2 text-left text-text-secondary hover:border-[hsl(var(--interactive)/0.48)] hover:bg-surface-2]">View intro</button></CardContent></Card>
+      <Card className="overflow-hidden border-border/60 shadow-md">
+        <div className={`bg-gradient-to-r ${modelGradient} px-4 py-3`}>
+          <p className="type-kicker text-xs font-medium uppercase tracking-wider text-white/80">Active Model</p>
+          <p className="type-heading mt-0.5 text-lg font-bold text-white">{formatServingModelLabel(state.selectedModel)}</p>
+        </div>
+        <CardContent className="pt-4 space-y-4">
+          <div className="rounded-lg bg-surface-2/60 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-500" />
+                <p className="type-kicker text-xs uppercase">Threshold</p>
+              </div>
+              <span className="type-metric text-lg font-bold tabular-nums text-text-primary">{state.selectedThreshold.toFixed(2)}</span>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border/50">
+              <div 
+                className={`h-full rounded-full bg-gradient-to-r ${modelGradient}`}
+                style={{ width: `${state.selectedThreshold * 100}%` }}
+              />
+            </div>
+          </div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/8 p-3">
+            <div className="flex items-start gap-2">
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <p className="type-caption text-text-secondary">{primaryHint[activeTab]}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="border-border/60 shadow-md">
+        <CardHeader className="border-b border-border/50 pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Settings2 className="h-4 w-4 text-text-secondary" />
+            Controls
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-3">
+          <button 
+            type="button" 
+            onClick={handleOpenIntro} 
+            className="type-body flex w-full items-center gap-2 rounded-lg border border-border/80 bg-surface-2/80 px-3 py-2.5 text-left text-text-secondary transition-all hover:border-[hsl(var(--interactive)/0.48)] hover:bg-surface-2 hover:text-text-primary"
+          >
+            <Info className="h-4 w-4" />
+            View intro
+          </button>
+        </CardContent>
+      </Card>
     </div>
   )
 
