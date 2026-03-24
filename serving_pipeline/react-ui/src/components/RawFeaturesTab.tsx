@@ -355,8 +355,8 @@ export const RawFeaturesTab = ({ autoApplyPresetId, autoApplyPresetToken = 0 }: 
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button type="button" variant="outline" onClick={clearDraft} className="micro-interactive h-11 border-border/70 bg-background/50">Clear Draft</Button>
-                  <Button type="submit" disabled={isLoading} className="micro-interactive h-11 min-w-32 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">{isLoading ? 'Predicting...' : 'Predict'}</Button>
+                  <Button type="button" variant="outline" onClick={clearDraft} className="h-11">Clear Draft</Button>
+                  <Button type="submit" disabled={isLoading} variant="glow" size="lg" className="min-w-32">{isLoading ? 'Predicting...' : 'Predict'}</Button>
                 </div>
               </div>
             </div>

@@ -370,8 +370,8 @@ export const FeastLookupTab = () => {
                   {draftRestored ? <p className="type-caption state-text-success">Draft restored from previous session.</p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button type="button" variant="outline" onClick={clearDraft} className="h-11 border-border/70 bg-background/50">Clear Draft</Button>
-                  <Button type="submit" disabled={isLoading} className="h-11 min-w-32 interactive-bg hover:bg-[hsl(var(--interactive-hover))]">
+                  <Button type="button" variant="outline" onClick={clearDraft} className="h-11">Clear Draft</Button>
+                  <Button type="submit" disabled={isLoading} variant="glow" size="lg" className="min-w-32">
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -389,7 +389,7 @@ export const FeastLookupTab = () => {
           <div className="space-y-3">
             <StatusBanner variant="error" message={state.errorMessage} />
             <div className="flex justify-end">
-              <Button type="button" variant="outline" onClick={retryPrediction} disabled={isLoading} className="h-10 border-border/70 bg-background/50">
+              <Button type="button" variant="outline" onClick={retryPrediction} disabled={isLoading} className="h-10">
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Retry prediction
               </Button>
