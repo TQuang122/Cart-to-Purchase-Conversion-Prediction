@@ -148,12 +148,6 @@ export function DashboardHeader({
     if (!lastUpdatedAt) return 'N/A'
     return lastUpdatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }, [lastUpdatedAt])
-  const stateMessage = useMemo(() => {
-    if (isManualRefreshing) return 'Refreshing model stats and API heartbeat...'
-    if (apiStatus === 'loading') return 'Checking API connection and service readiness.'
-    if (apiStatus === 'disconnected') return 'API disconnected. Start backend to resume predictions.'
-    return `Connected. Recent activity: ${stats?.recent_activity ?? 0} requests in the last 5 minutes.`
-  }, [apiStatus, isManualRefreshing, stats?.recent_activity])
 
   const sourceValues = Object.values(stats?.model_sources ?? {})
   const derivedUsable = sourceValues.filter(
@@ -299,13 +293,25 @@ export function DashboardHeader({
             <div className="dashboard-card-muted dashboard-card-scale-sm rounded-xl p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="type-kicker">System state</p>
-                <div className={`type-caption flex items-center gap-2 rounded-full border px-3 py-1 font-medium ${status.bgColor}`}>
+                <div className={`type-caption flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-medium ${status.bgColor}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${apiStatus === 'connected' ? 'bg-green-500' : apiStatus === 'loading' ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
                   {status.icon}
                   <span>{status.label}</span>
                 </div>
               </div>
-              <p className="type-caption">{stateMessage}</p>
-              <p className="type-caption mt-1">Updated: {lastUpdatedLabel}</p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2 rounded-lg bg-surface-2/60 px-3 py-2">
+                  <Activity className="h-4 w-4 text-blue-400" />
+                  <div className="flex-1">
+                    <p className="type-caption text-text-secondary">Recent activity</p>
+                    <p className="type-metric text-sm font-bold tabular-nums text-text-primary">{stats?.recent_activity ?? 0} <span className="text-xs font-normal text-text-secondary">requests / 5m</span></p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="type-caption text-text-secondary">Last updated</p>
+                  <p className="type-caption font-medium tabular-nums text-text-primary">{lastUpdatedLabel}</p>
+                </div>
+              </div>
               <div className="mt-3 flex items-center gap-2">
                 <button
                   onClick={onOpenIntro}
