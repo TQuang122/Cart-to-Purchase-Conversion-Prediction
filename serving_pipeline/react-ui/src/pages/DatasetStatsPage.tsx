@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ComposedChart,
@@ -160,6 +160,14 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
 }
 
 function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullLabel: string; value: number }[] }) {
+  const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
+  const [selectedBin, setSelectedBin] = useState<string | null>(null)
+
+  const sortedData = useMemo(() => {
+    if (sortOrder === 'none') return data
+    return [...data].sort((a, b) => sortOrder === 'asc' ? a.value - b.value : b.value - a.value)
+  }, [data, sortOrder])
+
   const averageBinVolume = data.length > 0
     ? data.reduce((sum, item) => sum + item.value, 0) / data.length
     : 0
@@ -167,13 +175,22 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
   return (
       <Card className="dashboard-card panel-accent">
       <CardHeader className="pb-2">
-        <CardTitle className="type-heading text-base">Price Distribution</CardTitle>
-        <CardDescription>Price histogram (8 bins)</CardDescription>
-      </CardHeader>
+          <div className="flex items-center justify-between cursor-pointer" onClick={() => setSortOrder(prev => prev === 'none' ? 'desc' : prev === 'desc' ? 'asc' : 'none')}>
+            <div>
+              <CardTitle className="type-heading text-base">Price Distribution</CardTitle>
+              <CardDescription>Price histogram (8 bins)</CardDescription>
+            </div>
+            {sortOrder !== 'none' && (
+              <span className="text-xs text-muted-foreground font-medium">
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </span>
+            )}
+          </div>
+        </CardHeader>
       <CardContent>
         <ChartMountGate className="h-56">
           {({ width, height }) => (
-            <BarChart width={width} height={height} data={data} margin={{ top: 8, right: 14, left: 0, bottom: 28 }} barCategoryGap="18%">
+            <BarChart width={width} height={height} data={sortedData} margin={{ top: 8, right: 14, left: 0, bottom: 28 }} barCategoryGap="18%">
               <defs>
                 <linearGradient id="priceHistogramGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.95} />
@@ -219,7 +236,20 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
                   fontSize: 10,
                 }}
               />
-              <Bar dataKey="value" fill="url(#priceHistogramGradient)" radius={[5, 5, 0, 0]} maxBarSize={52} activeBar={CHART_ACTIVE_BAR_STYLE} />
+              <Bar 
+              dataKey="value" 
+              fill="url(#priceHistogramGradient)" 
+              radius={[5, 5, 0, 0]} 
+              maxBarSize={52} 
+              activeBar={selectedBin ? { ...CHART_ACTIVE_BAR_STYLE, fill: 'hsl(var(--chart-3))', filter: 'brightness(1.3)' } : CHART_ACTIVE_BAR_STYLE}
+              onClick={(data) => {
+                if (data && typeof data !== 'boolean') {
+                  const payload = data as { axisLabel?: string }
+                  setSelectedBin(prev => prev === payload.axisLabel ? null : String(payload.axisLabel))
+                }
+              }}
+              style={{ cursor: 'pointer' }}
+            />
             </BarChart>
           )}
         </ChartMountGate>
@@ -292,7 +322,7 @@ function HorizontalBarChartCard({
                 </>
               )}
               <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={tooltipFormatter} />
-              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} barSize={20} activeBar={CHART_ACTIVE_BAR_STYLE} />
+              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} barSize={20} activeBar={CHART_ACTIVE_BAR_STYLE} style={{ cursor: 'pointer' }} />
             </BarChart>
           )}
         </ChartMountGate>
@@ -694,7 +724,7 @@ export function DatasetStatsPage() {
             <Card className="dashboard-card panel-accent">
               <CardHeader className="pb-2">
                 <CardTitle className="type-heading text-base">Cart Events by Day of Week</CardTitle>
-                <CardDescription>Volume by weekday</CardDescription>
+                <CardDescription className="cursor-pointer">Volume by weekday</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartMountGate className="h-64">
@@ -704,7 +734,7 @@ export function DatasetStatsPage() {
                       <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }} tickLine={false} />
                       <Tooltip contentStyle={CHART_TOOLTIP_CONTENT_STYLE} formatter={tooltipFormatter} />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="hsl(var(--chart-3))" activeBar={CHART_ACTIVE_BAR_STYLE}>
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="hsl(var(--chart-3))" activeBar={CHART_ACTIVE_BAR_STYLE} style={{ cursor: 'pointer' }}>
                         <LabelList dataKey="value" position="top" className="fill-foreground text-[10px]" />
                       </Bar>
                     </BarChart>
@@ -806,7 +836,7 @@ export function DatasetStatsPage() {
                           return [`${pct.toFixed(2)}% • ${formatNumber(raw)} records`, 'Stage']
                         }}
                       />
-                      <Bar dataKey="pct_of_view" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} minPointSize={14} activeBar={CHART_ACTIVE_BAR_STYLE}>
+                      <Bar dataKey="pct_of_view" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} minPointSize={14} activeBar={CHART_ACTIVE_BAR_STYLE} style={{ cursor: 'pointer' }}>
                         <LabelList
                           dataKey="value"
                           position="top"
@@ -847,7 +877,7 @@ export function DatasetStatsPage() {
                           return [`${formatRatioPercent(Number(value))} • Carts ${formatNumber(volume)} • Purchases ${formatNumber(purchases)} • Share ${(share * 100).toFixed(1)}%`, 'Conversion rate']
                         }}
                       />
-                      <Bar dataKey="rate" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]} activeBar={CHART_ACTIVE_BAR_STYLE}>
+                      <Bar dataKey="rate" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]} activeBar={CHART_ACTIVE_BAR_STYLE} style={{ cursor: 'pointer' }}>
                         <LabelList
                           dataKey="rate"
                           position="right"

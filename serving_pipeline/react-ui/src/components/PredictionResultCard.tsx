@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, RotateCcw, Sparkles, Target, TrendingDown, TrendingUp, Wand2, XCircle } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, Download, RotateCcw, Sparkles, Target, TrendingDown, TrendingUp, Wand2, XCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -66,6 +66,27 @@ export const PredictionResultCard = ({
     if (distanceFromMid >= 18) return 'Medium'
     return 'Low'
   }, [percentage])
+
+  const handleDownload = () => {
+    const rows = [
+      ['probability', 'is_purchased', 'threshold', 'model_used', 'timestamp'],
+      [
+        prediction.probability?.toFixed(4) ?? '',
+        String(prediction.is_purchased),
+        String(prediction.decision_threshold ?? ''),
+        prediction.model_used ?? '',
+        new Date().toISOString(),
+      ],
+    ]
+    const csv = rows.map((r) => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `prediction_${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const confidenceLegend = [
     {
@@ -474,6 +495,10 @@ export const PredictionResultCard = ({
           </Collapsible>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border/55 pt-3">
+            <Button onClick={handleDownload} variant="outline" className="h-9 border-border/70 bg-background/50">
+              <Download className="mr-1.5 h-4 w-4" />
+              Download
+            </Button>
             {onPredictAgain ? (
               <Button onClick={onPredictAgain} variant="outline" className="h-9 border-border/70 bg-background/50">
                 <RotateCcw className="mr-1.5 h-4 w-4" />
