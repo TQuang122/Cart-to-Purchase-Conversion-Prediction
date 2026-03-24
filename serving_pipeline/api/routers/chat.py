@@ -3,11 +3,12 @@ import json
 import os
 import re
 import time
+from typing import AsyncIterator
 from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from api.schemas import ChartAnalysisRequest, ChatMessageRequest, ChatMessageResponse
 
@@ -44,6 +45,22 @@ def _extract_gemini_text(data: dict) -> str:
     if not text:
         return "I could not generate a response right now."
     return text.strip()
+
+
+def _extract_gemini_stream_text(data: dict) -> str:
+    candidates = data.get("candidates") or []
+    if not candidates:
+        return ""
+
+    content = candidates[0].get("content") or {}
+    parts = content.get("parts") or []
+    if not parts:
+        return ""
+
+    text_chunks = [str(part.get("text", "")) for part in parts if part.get("text")]
+    if not text_chunks:
+        return ""
+    return "".join(text_chunks)
 
 
 def _extract_finish_reason(data: dict) -> str:
@@ -260,6 +277,148 @@ async def chat(payload: ChatMessageRequest) -> ChatMessageResponse:
     return await _run_gemini_chat([{"text": payload.message}])
 
 
+@router.post("/stream")
+async def chat_stream(payload: ChatMessageRequest) -> StreamingResponse:
+    async def event_generator() -> AsyncIterator[str]:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            yield 'event: error\ndata: {"detail": "Missing GEMINI_API_KEY on server."}\n\n'
+            return
+
+        body = _build_generation_body(
+            [{"text": payload.message}],
+            temperature=0.4,
+            max_output_tokens=900,
+        )
+
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+        model_candidates = [preferred_model] if preferred_model else []
+        model_candidates.extend(
+            [m for m in DEFAULT_MODEL_CANDIDATES if m and m != preferred_model]
+        )
+
+        params = {"key": api_key, "alt": "sse"}
+        trace_id = f"chat_{uuid4().hex[:12]}"
+        started_at = time.perf_counter()
+        safety_flags: set[str] = set()
+        selected_model: str | None = None
+        stream_started = False
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                for model in model_candidates:
+                    url = f"{GEMINI_API_BASE}/{model}:streamGenerateContent"
+                    async with client.stream(
+                        "POST", url, params=params, json=body
+                    ) as response:
+                        if response.status_code == 404:
+                            continue
+                        if not response.is_success:
+                            detail = response.text
+                            yield f"event: error\ndata: {json.dumps({'detail': f'Gemini API error: {detail}'}, ensure_ascii=True)}\n\n"
+                            return
+
+                        selected_model = model
+                        meta = {
+                            "trace_id": trace_id,
+                            "model": selected_model,
+                            "latency_ms": 0,
+                            "confidence": None,
+                            "safety_flags": [],
+                        }
+                        yield f"event: meta\ndata: {json.dumps(meta, ensure_ascii=True)}\n\n"
+                        stream_started = True
+
+                        event_name = ""
+                        data_lines: list[str] = []
+
+                        async for raw_line in response.aiter_lines():
+                            line = raw_line.strip()
+                            if not line:
+                                if data_lines:
+                                    data_text = "\n".join(data_lines)
+                                    data_lines = []
+
+                                    try:
+                                        chunk_data = json.loads(data_text)
+                                    except json.JSONDecodeError:
+                                        event_name = ""
+                                        continue
+
+                                    safety_flags.update(
+                                        _extract_safety_flags(chunk_data)
+                                    )
+                                    chunk_text = _extract_gemini_stream_text(chunk_data)
+                                    if chunk_text:
+                                        yield f"event: chunk\ndata: {json.dumps({'text': chunk_text}, ensure_ascii=True)}\n\n"
+
+                                    finish_reason = _extract_finish_reason(chunk_data)
+                                    if finish_reason in {
+                                        "STOP",
+                                        "MAX_TOKENS",
+                                        "SAFETY",
+                                        "BLOCKLIST",
+                                    }:
+                                        latency_ms = int(
+                                            (time.perf_counter() - started_at) * 1000
+                                        )
+                                        final_meta = {
+                                            "trace_id": trace_id,
+                                            "model": selected_model,
+                                            "latency_ms": latency_ms,
+                                            "confidence": None,
+                                            "safety_flags": sorted(safety_flags),
+                                        }
+                                        yield f"event: meta\ndata: {json.dumps(final_meta, ensure_ascii=True)}\n\n"
+                                        yield f"event: done\ndata: {json.dumps({}, ensure_ascii=True)}\n\n"
+                                        return
+
+                                event_name = ""
+                                continue
+
+                            if line.startswith("event:"):
+                                event_name = line[6:].strip()
+                                continue
+
+                            if line.startswith("data:"):
+                                data_lines.append(line[5:].strip())
+                                continue
+
+                            if event_name == "" and data_lines:
+                                data_lines.append(line)
+
+                        latency_ms = int((time.perf_counter() - started_at) * 1000)
+                        final_meta = {
+                            "trace_id": trace_id,
+                            "model": selected_model,
+                            "latency_ms": latency_ms,
+                            "confidence": None,
+                            "safety_flags": sorted(safety_flags),
+                        }
+                        yield f"event: meta\ndata: {json.dumps(final_meta, ensure_ascii=True)}\n\n"
+                        yield f"event: done\ndata: {json.dumps({}, ensure_ascii=True)}\n\n"
+                        return
+
+                if not stream_started:
+                    yield 'event: error\ndata: {"detail": "No compatible Gemini model found for streaming."}\n\n'
+        except HTTPException as exc:
+            detail = (
+                exc.detail if isinstance(exc.detail, str) else "Chat stream failed."
+            )
+            yield f"event: error\ndata: {json.dumps({'detail': detail}, ensure_ascii=True)}\n\n"
+        except Exception:
+            yield 'event: error\ndata: {"detail": "Unexpected stream failure."}\n\n'
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 @router.post("/image", response_model=ChatMessageResponse)
 async def chat_image(
     message: str = Form(...),
@@ -348,4 +507,9 @@ async def chat_image_options() -> Response:
 
 @router.options("/chart")
 async def chat_chart_options() -> Response:
+    return Response(status_code=204)
+
+
+@router.options("/stream")
+async def chat_stream_options() -> Response:
     return Response(status_code=204)

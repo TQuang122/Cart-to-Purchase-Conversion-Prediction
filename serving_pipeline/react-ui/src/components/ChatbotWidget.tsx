@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 import { resolveApiRoot } from '@/lib/api'
-import { BookOpen, Bot, Copy, Download, ImagePlus, MessageCircle, Send, Trash2, X } from 'lucide-react'
+import { toast } from '@/lib/toast'
+import { ArrowDown, BookOpen, Bot, Copy, Download, ImagePlus, MessageCircle, RefreshCcw, Scissors, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
 
 type ChatRole = 'assistant' | 'user'
 
@@ -39,11 +41,16 @@ interface SavedInsightNote {
   trace_id?: string | null
 }
 
+interface ParsedSection {
+  title: string
+  content: string
+}
+
 const starterMessages: ChatMessage[] = [
   {
     id: 'm1',
     role: 'assistant',
-    text: 'Hi! I am connected to Gemini. Ask me anything about this prediction dashboard.',
+    text: 'Hi! I am CTP Assistant. Ask me anything about this prediction dashboard.',
   },
 ]
 
@@ -81,9 +88,111 @@ const hasGroundingSignals = (text: string) => {
   return false
 }
 
+const parseStructuredSections = (text: string): ParsedSection[] => {
+  const lines = text.split('\n')
+  const sections: ParsedSection[] = []
+  let current: ParsedSection | null = null
+  const sectionHeaderRegex = /^\s*(insight|why|recommended action|grounding)\s*:?\s*$/i
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    const headerMatch = trimmed.match(sectionHeaderRegex)
+
+    if (headerMatch) {
+      if (current && current.content.trim()) {
+        sections.push({ ...current, content: current.content.trim() })
+      }
+      current = { title: headerMatch[1], content: '' }
+      continue
+    }
+
+    if (current) {
+      current.content = current.content ? `${current.content}\n${line}` : line
+    }
+  }
+
+  if (current && current.content.trim()) {
+    sections.push({ ...current, content: current.content.trim() })
+  }
+
+  return sections
+}
+
+function MessageMarkdown({ text, assistant }: { text: string; assistant: boolean }) {
+  return (
+    <div className={assistant ? 'type-body text-sm text-foreground' : 'type-body text-sm text-[hsl(var(--interactive-contrast))]'}>
+      <ReactMarkdown
+        components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0 leading-6">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>,
+        li: ({ children }) => <li className="leading-6">{children}</li>,
+        h1: ({ children }) => <h4 className="mb-2 text-sm font-semibold tracking-tight">{children}</h4>,
+        h2: ({ children }) => <h4 className="mb-2 text-sm font-semibold tracking-tight">{children}</h4>,
+        h3: ({ children }) => <h5 className="mb-2 text-sm font-semibold tracking-tight">{children}</h5>,
+        blockquote: ({ children }) => (
+          <blockquote className="mb-2 border-l-2 border-border/70 pl-3 italic text-muted-foreground last:mb-0">
+            {children}
+          </blockquote>
+        ),
+        code: ({ className, children }) => {
+          const hasLanguage = typeof className === 'string' && className.includes('language-')
+          if (hasLanguage) {
+            return (
+              <pre className="mb-2 overflow-x-auto rounded-lg border border-border/60 bg-background/70 p-3 text-xs last:mb-0">
+                <code className={className}>{children}</code>
+              </pre>
+            )
+          }
+          return (
+            <code className="rounded bg-background/70 px-1 py-0.5 font-mono text-[12px]">
+              {children}
+            </code>
+          )
+        },
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-[hsl(var(--interactive-hover))] underline underline-offset-2"
+          >
+            {children}
+          </a>
+        ),
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
+function AssistantStructuredMessage({ text }: { text: string }) {
+  const sections = parseStructuredSections(text)
+
+  if (sections.length < 2) {
+    return <MessageMarkdown text={text} assistant={true} />
+  }
+
+  return (
+    <div className="space-y-2">
+      {sections.map((section) => (
+        <div key={`${section.title}-${section.content.slice(0, 24)}`} className="rounded-lg border border-border/60 bg-background/40 p-2.5">
+          <p className="type-kicker mb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            {section.title}
+          </p>
+          <MessageMarkdown text={section.content} assistant={true} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ChatbotWidget() {
   const serverBaseUrl = useMemo(() => resolveApiRoot(), [])
   const chatApiUrl = useMemo(() => `${serverBaseUrl}/chat`, [serverBaseUrl])
+  const chatStreamApiUrl = useMemo(() => `${serverBaseUrl}/chat/stream`, [serverBaseUrl])
   const chatImageApiUrl = useMemo(() => `${serverBaseUrl}/chat/image`, [serverBaseUrl])
   const chatChartApiUrl = useMemo(() => `${serverBaseUrl}/chat/chart`, [serverBaseUrl])
 
@@ -99,11 +208,26 @@ export function ChatbotWidget() {
   const [savedNotesCount, setSavedNotesCount] = useState(0)
   const [savedNotes, setSavedNotes] = useState<SavedInsightNote[]>([])
   const [showSavedNotes, setShowSavedNotes] = useState(false)
+  const [responseMode, setResponseMode] = useState<'fast' | 'deep'>('fast')
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null)
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Record<string, boolean>>({})
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const inFlightRef = useRef(false)
+  const animationTimersRef = useRef<number[]>([])
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const canSend = useMemo(() => input.trim().length > 0, [input])
+  const isGenerating = isThinking || typingMessageId !== null
+
+  const applyResponseModeInstruction = useCallback((message: string) => {
+    const trimmed = message.trim()
+    if (responseMode === 'fast') {
+      return `${trimmed}\n\nRespond concisely in at most 120 words.`
+    }
+    return `${trimmed}\n\nProvide a thorough but practical response in under 280 words with short sections.`
+  }, [responseMode])
 
   const pushAssistantReply = useCallback((
     text: string,
@@ -116,11 +240,55 @@ export function ChatbotWidget() {
       usedImageFallback?: boolean
       usedChartFallback?: boolean
       groundingMissing?: boolean
+    },
+    options?: {
+      animate?: boolean
     }
   ) => {
-    const reply: ChatMessage = { id: `a-${Date.now()}`, role: 'assistant', text, meta }
+    const replyId = `a-${Date.now()}`
+    const shouldAnimate = options?.animate === true && text.length > 40
+
+    const reply: ChatMessage = {
+      id: replyId,
+      role: 'assistant',
+      text: shouldAnimate ? '' : text,
+      meta,
+    }
     setMessages((prev) => [...prev, reply])
+
+    if (shouldAnimate) {
+      setTypingMessageId(replyId)
+      let currentLength = 0
+      const step = responseMode === 'fast' ? 8 : 5
+
+      const tick = () => {
+        currentLength = Math.min(currentLength + step, text.length)
+        const partial = text.slice(0, currentLength)
+        setMessages((prev) => prev.map((item) => (item.id === replyId ? { ...item, text: partial } : item)))
+
+        if (currentLength < text.length) {
+          const timerId = window.setTimeout(tick, 16)
+          animationTimersRef.current.push(timerId)
+        } else {
+          setTypingMessageId((id) => (id === replyId ? null : id))
+        }
+      }
+
+      const timerId = window.setTimeout(tick, 32)
+      animationTimersRef.current.push(timerId)
+    }
+
     requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }))
+  }, [responseMode])
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+      for (const timerId of animationTimersRef.current) {
+        window.clearTimeout(timerId)
+      }
+      animationTimersRef.current = []
+    }
   }, [])
 
   const clearSelectedImage = (revokePreview = true) => {
@@ -225,21 +393,167 @@ export function ChatbotWidget() {
   const askGemini = async (question: string, imageFile: File | null) => {
     setIsThinking(true)
     try {
+      const promptMessage = applyResponseModeInstruction(question)
+      abortControllerRef.current?.abort()
+      const requestController = new AbortController()
+      abortControllerRef.current = requestController
+
+      if (!imageFile) {
+        try {
+          const streamResponse = await fetch(chatStreamApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: promptMessage }),
+            signal: requestController.signal,
+          })
+
+          const contentType = streamResponse.headers.get('content-type') || ''
+          const isEventStream = streamResponse.ok && contentType.includes('text/event-stream')
+          if (isEventStream && streamResponse.body) {
+            const replyId = `a-${Date.now()}`
+            let streamedText = ''
+            let streamMeta: ChatMessage['meta'] = {}
+
+            setMessages((prev) => [...prev, { id: replyId, role: 'assistant', text: '', meta: streamMeta }])
+            setTypingMessageId(replyId)
+
+            const reader = streamResponse.body.getReader()
+            const decoder = new TextDecoder()
+            let buffer = ''
+
+            const applyMessageUpdate = (nextText?: string, nextMeta?: ChatMessage['meta']) => {
+              setMessages((prev) => prev.map((item) => {
+                if (item.id !== replyId) return item
+                return {
+                  ...item,
+                  text: nextText ?? item.text,
+                  meta: nextMeta ? { ...(item.meta ?? {}), ...nextMeta } : item.meta,
+                }
+              }))
+            }
+
+            const processFrame = (frame: string) => {
+              const lines = frame.split('\n')
+              let eventType = ''
+              const dataLines: string[] = []
+
+              for (const line of lines) {
+                if (line.startsWith('event:')) {
+                  eventType = line.slice(6).trim()
+                } else if (line.startsWith('data:')) {
+                  dataLines.push(line.slice(5).trim())
+                }
+              }
+
+              const dataText = dataLines.join('\n')
+
+              if (!eventType || !dataText) return
+
+              if (eventType === 'meta') {
+                try {
+                  const parsed = JSON.parse(dataText) as {
+                    confidence?: number | null
+                    safety_flags?: string[]
+                    trace_id?: string | null
+                    model?: string | null
+                    latency_ms?: number | null
+                  }
+                  streamMeta = {
+                    confidence: parsed.confidence,
+                    safetyFlags: parsed.safety_flags,
+                    traceId: parsed.trace_id,
+                    model: parsed.model,
+                    latencyMs: parsed.latency_ms,
+                  }
+                  applyMessageUpdate(undefined, streamMeta)
+                } catch {
+                }
+                return
+              }
+
+              if (eventType === 'chunk') {
+                try {
+                  const parsed = JSON.parse(dataText) as { text?: string }
+                  if (parsed.text) {
+                    streamedText = `${streamedText}${parsed.text}`
+                    applyMessageUpdate(streamedText)
+                    requestAnimationFrame(() => {
+                      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
+                    })
+                  }
+                } catch {
+                }
+                return
+              }
+
+              if (eventType === 'error') {
+                try {
+                  const parsed = JSON.parse(dataText) as { detail?: string }
+                  const errorText = parsed.detail || 'Stream error.'
+                  streamedText = streamedText || errorText
+                  applyMessageUpdate(streamedText)
+                } catch {
+                  const errorText = 'Stream error.'
+                  streamedText = streamedText || errorText
+                  applyMessageUpdate(streamedText)
+                }
+                setTypingMessageId((current) => (current === replyId ? null : current))
+                return
+              }
+
+              if (eventType === 'done') {
+                setTypingMessageId((current) => (current === replyId ? null : current))
+              }
+            }
+
+            while (true) {
+              const { value, done } = await reader.read()
+              if (done) break
+              buffer = `${buffer}${decoder.decode(value, { stream: true })}`
+
+              while (buffer.includes('\n\n')) {
+                const frameEnd = buffer.indexOf('\n\n')
+                const frame = buffer.slice(0, frameEnd).trim()
+                buffer = buffer.slice(frameEnd + 2)
+                if (frame) {
+                  processFrame(frame)
+                }
+              }
+            }
+
+            if (buffer.trim()) {
+              processFrame(buffer.trim())
+            }
+
+            setTypingMessageId((current) => (current === replyId ? null : current))
+            abortControllerRef.current = null
+            return
+          }
+        } catch (streamError) {
+          if (streamError instanceof Error && streamError.name === 'AbortError') {
+            return
+          }
+          console.warn('Chat stream unavailable, falling back to buffered response.', streamError)
+        }
+      }
+
       let usedImageFallback = false
       let response = imageFile
         ? await fetch(chatImageApiUrl, {
             method: 'POST',
             body: (() => {
               const form = new FormData()
-              form.append('message', question)
+              form.append('message', promptMessage)
               form.append('image', imageFile)
               return form
             })(),
+            signal: requestController.signal,
           })
         : await fetch(chatApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: question }),
+            body: JSON.stringify({ message: promptMessage }),
+            signal: requestController.signal,
           })
 
       if (imageFile && response.status === 404) {
@@ -247,7 +561,8 @@ export function ChatbotWidget() {
           response = await fetch(chatApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: `${question}\n\n[Image attached but /chat/image is unavailable on server.]` }),
+          body: JSON.stringify({ message: `${promptMessage}\n\n[Image attached but /chat/image is unavailable on server.]` }),
+          signal: requestController.signal,
         })
       }
 
@@ -261,9 +576,9 @@ export function ChatbotWidget() {
         }
 
         if (detail) {
-          pushAssistantReply(`Gemini backend error: ${detail}`)
+          pushAssistantReply(`CTP Assistant backend error: ${detail}`)
         } else {
-          pushAssistantReply('I could not reach Gemini right now. Please check API server and GEMINI_API_KEY.')
+          pushAssistantReply('I could not reach CTP Assistant right now. Please check API server and GEMINI_API_KEY.')
         }
         return
       }
@@ -276,7 +591,7 @@ export function ChatbotWidget() {
         model?: string | null
         latency_ms?: number | null
       }
-      const replyText = data.reply?.trim() || 'I received an empty response from Gemini.'
+      const replyText = data.reply?.trim() || 'I received an empty response from CTP Assistant.'
       pushAssistantReply(replyText, {
         confidence: data.confidence,
         safetyFlags: data.safety_flags,
@@ -285,17 +600,30 @@ export function ChatbotWidget() {
         latencyMs: data.latency_ms,
         usedImageFallback,
         groundingMissing: replyText.length >= 80 && !hasGroundingSignals(replyText),
-      })
-    } catch {
+      }, { animate: true })
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
       pushAssistantReply(`Connection error. Please ensure backend is running at ${serverBaseUrl}.`)
     } finally {
       setIsThinking(false)
+      setTypingMessageId(null)
+      abortControllerRef.current = null
     }
   }
 
   const askGeminiChart = useCallback(async (payload: ChartAnalyzeEventPayload) => {
     setIsThinking(true)
     try {
+      const modeInstruction = responseMode === 'fast'
+        ? 'Keep the answer under 120 words.'
+        : 'Keep the answer under 280 words with practical details.'
+      const effectivePayload: ChartAnalyzeEventPayload = {
+        ...payload,
+        question: `${payload.question.trim()}\n${modeInstruction}`,
+      }
+
       let usedChartFallback = false
       let response: Response
 
@@ -303,7 +631,7 @@ export function ChatbotWidget() {
         response = await fetch(chatChartApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(effectivePayload),
         })
       } else {
         response = new Response(null, { status: 404 })
@@ -316,7 +644,7 @@ export function ChatbotWidget() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            message: `Analyze chart data and provide insights.\n\nChart payload:\n${JSON.stringify(payload)}`,
+            message: `Analyze chart data and provide insights.\n\nChart payload:\n${JSON.stringify(effectivePayload)}`,
           }),
         })
       } else if (response.ok) {
@@ -352,13 +680,13 @@ export function ChatbotWidget() {
         latencyMs: data.latency_ms,
         usedChartFallback,
         groundingMissing: replyText.length >= 80 && !hasGroundingSignals(replyText),
-      })
+      }, { animate: true })
     } catch {
       pushAssistantReply(`Connection error. Please ensure backend is running at ${serverBaseUrl}.`)
     } finally {
       setIsThinking(false)
     }
-  }, [chartEndpointSupport, chatApiUrl, chatChartApiUrl, pushAssistantReply, serverBaseUrl])
+  }, [chartEndpointSupport, chatApiUrl, chatChartApiUrl, pushAssistantReply, responseMode, serverBaseUrl])
 
   const dispatchChartAnalysis = useCallback((payload: ChartAnalyzeEventPayload, userText?: string) => {
     if (!payload.question || inFlightRef.current) return
@@ -392,32 +720,96 @@ export function ChatbotWidget() {
     dispatchChartAnalysis(payload, question)
   }, [chartPresetBasePayload, dispatchChartAnalysis])
 
-  const handleSend = () => {
-    const text = input.trim()
-    if (!text || inFlightRef.current) return
-
-    const imageFileToSend = selectedImageFile
-    const imagePreviewToShow = selectedImagePreview
+  const dispatchUserPrompt = useCallback((
+    text: string,
+    options?: {
+      imageFile?: File | null
+      imagePreview?: string | null
+    }
+  ) => {
+    const trimmed = text.trim()
+    if (!trimmed || inFlightRef.current) return
 
     inFlightRef.current = true
 
     const userMessage: ChatMessage = {
       id: `u-${Date.now()}`,
       role: 'user',
-      text,
-      imagePreviewUrl: imagePreviewToShow ?? undefined,
+      text: trimmed,
+      imagePreviewUrl: options?.imagePreview ?? undefined,
     }
 
     setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    clearSelectedImage(false)
-
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
     })
 
-    void askGemini(text, imageFileToSend).finally(() => {
+    void askGemini(trimmed, options?.imageFile ?? null).finally(() => {
       inFlightRef.current = false
+    })
+  }, [askGemini])
+
+  const findPreviousUserPrompt = useCallback((assistantMessageId: string) => {
+    const index = messages.findIndex((m) => m.id === assistantMessageId)
+    if (index <= 0) return null
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (messages[i].role === 'user') return messages[i].text
+    }
+    return null
+  }, [messages])
+
+  const handleRegenerate = useCallback((assistantMessageId: string) => {
+    const previousPrompt = findPreviousUserPrompt(assistantMessageId)
+    if (!previousPrompt) return
+    dispatchUserPrompt(previousPrompt)
+  }, [dispatchUserPrompt, findPreviousUserPrompt])
+
+  const handleSimplify = useCallback((assistantText: string) => {
+    const followUp = `Simplify this answer for a non-technical audience in under 120 words:\n\n${assistantText}`
+    dispatchUserPrompt(followUp)
+  }, [dispatchUserPrompt])
+
+  const handleShorten = useCallback((assistantText: string) => {
+    const followUp = `Shorten this answer into key bullets (max 5 bullets):\n\n${assistantText}`
+    dispatchUserPrompt(followUp)
+  }, [dispatchUserPrompt])
+
+  const handleStopGenerating = useCallback(() => {
+    const hadActiveGeneration = Boolean(typingMessageId || isThinking)
+    const activeTypingId = typingMessageId
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    inFlightRef.current = false
+    setIsThinking(false)
+    setTypingMessageId(null)
+
+    if (activeTypingId) {
+      setMessages((prev) => prev.filter((message) => {
+        if (message.id !== activeTypingId || message.role !== 'assistant') return true
+        return message.text.trim().length > 0
+      }))
+    }
+
+    if (hadActiveGeneration) {
+      toast.warning('Generation stopped', 2400)
+    }
+  }, [isThinking, typingMessageId])
+
+  const toggleMessageExpand = useCallback((messageId: string) => {
+    setExpandedMessageIds((prev) => ({ ...prev, [messageId]: !prev[messageId] }))
+  }, [])
+
+  const handleSend = () => {
+    const text = input.trim()
+    if (!text || inFlightRef.current) return
+
+    const imageFileToSend = selectedImageFile
+    const imagePreviewToShow = selectedImagePreview
+    setInput('')
+    clearSelectedImage(false)
+    dispatchUserPrompt(text, {
+      imageFile: imageFileToSend,
+      imagePreview: imagePreviewToShow,
     })
   }
 
@@ -469,6 +861,21 @@ export function ChatbotWidget() {
       window.removeEventListener('chatbot:analyze-chart', onAnalyzeChart as EventListener)
     }
   }, [chatChartApiUrl, dispatchChartAnalysis, loadSavedNotes])
+
+  useEffect(() => {
+    const container = listRef.current
+    if (!container) return
+
+    const onScroll = () => {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+      setShowJumpToLatest(distanceFromBottom > 80)
+    }
+
+    container.addEventListener('scroll', onScroll)
+    return () => {
+      container.removeEventListener('scroll', onScroll)
+    }
+  }, [open])
 
   return (
     <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
@@ -561,17 +968,37 @@ export function ChatbotWidget() {
             </div>
           ) : null}
 
-          <div ref={listRef} className="max-h-[55vh] space-y-3 overflow-y-auto px-4 py-3 sm:max-h-[320px]">
+          <div ref={listRef} className="max-h-[55vh] space-y-3 overflow-y-auto px-4 py-3 sm:max-h-[340px]">
             {messages.map((message) => (
               <div key={message.id} className={message.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                 <div
                   className={
                     message.role === 'user'
-                      ? 'max-w-[85%] rounded-2xl rounded-br-md interactive-bg px-3 py-2 text-sm'
-                      : 'max-w-[85%] rounded-2xl rounded-bl-md border border-border/60 bg-card/80 px-3 py-2 text-sm text-foreground'
+                      ? 'max-w-[90%] rounded-2xl rounded-br-md interactive-bg px-3.5 py-2.5 text-sm shadow-sm'
+                      : 'relative max-w-[90%] rounded-2xl rounded-bl-md border border-border/60 bg-card/90 px-3.5 py-2.5 text-sm text-foreground shadow-sm'
                   }
                 >
-                  {message.text}
+                  {message.role === 'assistant' ? (
+                    <>
+                      <div className={message.text.length > 480 && !expandedMessageIds[message.id] ? 'max-h-48 overflow-hidden' : ''}>
+                        <AssistantStructuredMessage text={message.text} />
+                      </div>
+                      {message.text.length > 480 ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleMessageExpand(message.id)}
+                          className="type-caption mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          {expandedMessageIds[message.id] ? 'Collapse details' : 'Expand details'}
+                        </button>
+                      ) : null}
+                      {!expandedMessageIds[message.id] && message.text.length > 480 ? (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-[hsl(var(--surface-1)/0.95)] to-transparent" />
+                      ) : null}
+                    </>
+                  ) : (
+                    <MessageMarkdown text={message.text} assistant={false} />
+                  )}
                   {message.imagePreviewUrl ? (
                     <img
                       src={message.imagePreviewUrl}
@@ -596,31 +1023,64 @@ export function ChatbotWidget() {
                           Missing explicit grounding
                         </span>
                       ) : null}
-                      <p className="type-caption mt-1 text-[11px] text-muted-foreground">
-                      {message.meta.traceId ? `trace: ${message.meta.traceId}` : 'trace: n/a'}
-                      {message.meta.safetyFlags && message.meta.safetyFlags.length > 0
-                        ? ` | safety: ${message.meta.safetyFlags.join(', ')}`
-                        : ''}
-                      {message.meta.model ? ` | model: ${message.meta.model}` : ''}
-                      {typeof message.meta.latencyMs === 'number' ? ` | latency: ${message.meta.latencyMs}ms` : ''}
-                      {typeof message.meta.confidence === 'number'
-                        ? ` | confidence: ${(message.meta.confidence * 100).toFixed(1)}%`
-                        : ''}
-                      </p>
+                      {((message.meta.safetyFlags && message.meta.safetyFlags.length > 0) || typeof message.meta.confidence === 'number') ? (
+                        <p className="type-caption mt-1 text-[11px] text-muted-foreground">
+                          {message.meta.safetyFlags && message.meta.safetyFlags.length > 0
+                            ? `safety: ${message.meta.safetyFlags.join(', ')}`
+                            : ''}
+                          {typeof message.meta.confidence === 'number'
+                            ? `${message.meta.safetyFlags && message.meta.safetyFlags.length > 0 ? ' | ' : ''}confidence: ${(message.meta.confidence * 100).toFixed(1)}%`
+                            : ''}
+                        </p>
+                      ) : null}
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <button
                           type="button"
                           onClick={() => void copyInsight(message.text)}
-                          className="type-caption rounded border border-border/70 bg-background/55 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
                         >
+                          <Copy className="h-3 w-3" />
                           Copy insight
                         </button>
                         <button
                           type="button"
                           onClick={() => saveInsightNote(message)}
-                          className="type-caption rounded border border-border/70 bg-background/55 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
                         >
+                          <BookOpen className="h-3 w-3" />
                           Save note
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applySavedNoteToInput(message.text)}
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
+                        >
+                          <Send className="h-3 w-3" />
+                          Use as prompt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerate(message.id)}
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
+                        >
+                          <RefreshCcw className="h-3 w-3" />
+                          Regenerate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSimplify(message.text)}
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Simplify
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShorten(message.text)}
+                          className="type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/55 px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:bg-background/80 hover:text-foreground"
+                        >
+                          <Scissors className="h-3 w-3" />
+                          Shorten
                         </button>
                       </div>
                     </>
@@ -628,17 +1088,57 @@ export function ChatbotWidget() {
                 </div>
               </div>
             ))}
-            {isThinking && (
+            {typingMessageId && (
+              <div className="type-caption text-[10px] text-muted-foreground">Streaming response…</div>
+            )}
+            {isThinking && !typingMessageId && (
               <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-border/60 bg-card/80 px-3 py-2 text-sm text-foreground">
-                  Gemini is thinking…
+                <div className="max-w-[90%] rounded-2xl rounded-bl-md border border-border/60 bg-card/90 px-3.5 py-2.5 text-sm text-foreground shadow-sm">
+                  <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Bot className="h-3.5 w-3.5" />
+                    CTP Assistant is thinking
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--interactive-hover))]" />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--interactive-hover))]" style={{ animationDelay: '120ms' }} />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[hsl(var(--interactive-hover))]" style={{ animationDelay: '240ms' }} />
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
+          {showJumpToLatest ? (
+            <div className="pointer-events-none absolute bottom-24 right-4">
+              <button
+                type="button"
+                onClick={() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })}
+                className="pointer-events-auto type-caption inline-flex items-center gap-1 rounded-full border border-border/70 bg-surface-1/95 px-2.5 py-1 text-[10px] text-muted-foreground shadow hover:text-foreground"
+              >
+                <ArrowDown className="h-3 w-3" />
+                Latest
+              </button>
+            </div>
+          ) : null}
+
           <div className="border-t border-border/60 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setResponseMode('fast')}
+                  className={`type-caption inline-flex items-center rounded-full border px-2 py-1 text-[10px] transition-colors ${responseMode === 'fast' ? 'border-[hsl(var(--interactive)/0.65)] bg-[hsl(var(--interactive)/0.16)] text-foreground' : 'border-border/70 text-muted-foreground hover:text-foreground'}`}
+                >
+                  Fast
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResponseMode('deep')}
+                  className={`type-caption inline-flex items-center rounded-full border px-2 py-1 text-[10px] transition-colors ${responseMode === 'deep' ? 'border-[hsl(var(--interactive)/0.65)] bg-[hsl(var(--interactive)/0.16)] text-foreground' : 'border-border/70 text-muted-foreground hover:text-foreground'}`}
+                >
+                  Deep
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowSavedNotes((prev) => !prev)}
@@ -658,7 +1158,7 @@ export function ChatbotWidget() {
                       key={question}
                       type="button"
                       onClick={() => runPresetQuestion(question)}
-                      disabled={isThinking}
+                      disabled={isGenerating}
                       className="type-caption shrink-0 rounded border border-border/70 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
                     >
                       {question}
@@ -720,14 +1220,25 @@ export function ChatbotWidget() {
                 autoComplete="off"
                 className="h-10 flex-1 rounded-xl border border-border/70 bg-background/80 px-3 text-sm text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:border-[hsl(var(--interactive)/0.6)]"
               />
-              <button
-                onClick={handleSend}
-                disabled={!canSend || isThinking}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl interactive-bg transition-colors hover:bg-[hsl(var(--interactive-hover))] disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              {isGenerating ? (
+                <button
+                  onClick={handleStopGenerating}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[hsl(var(--error)/0.5)] bg-[hsl(var(--error)/0.12)] text-[hsl(var(--error))] transition-colors hover:bg-[hsl(var(--error)/0.2)]"
+                  aria-label="Stop generating"
+                  title="Stop generating"
+                >
+                  <Square className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!canSend}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl interactive-bg transition-colors hover:bg-[hsl(var(--interactive-hover))] disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Send message"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
