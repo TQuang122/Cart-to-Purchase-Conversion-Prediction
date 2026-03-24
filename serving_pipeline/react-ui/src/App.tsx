@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight, Database, FileSpreadsheet, Github, Loader2, PanelRightClose, PanelRightOpen, Search, ShoppingCart, Sparkles } from 'lucide-react'
 import { Analytics } from '@vercel/analytics/react'
 
@@ -182,9 +182,9 @@ function App() {
               <div className="flex items-center gap-2">
                 <Magnetic intensity={0.4} range={80}>
                   <RainbowButton colors={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b']} duration={3}>
-                    <Link to="/dataset" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
-                      Dataset Explorer
-                    </Link>
+                      <Link to="/dashboard" className="relative z-10 flex items-center gap-2 text-sm font-semibold text-foreground">
+                        Dashboard Explorer
+                      </Link>
                   </RainbowButton>
                 </Magnetic>
                 <Magnetic intensity={0.12} range={46}>
@@ -301,7 +301,8 @@ function App() {
         <Route path="/raw" element={workspaceElement} />
         <Route path="/batch" element={workspaceElement} />
         <Route path="/feast" element={workspaceElement} />
-        <Route path="/dataset" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
+        <Route path="/dashboard" element={<Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}><DatasetStatsPage /></Suspense>} />
+        <Route path="/dataset" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <Analytics />
     </AnimatedToastProvider>
