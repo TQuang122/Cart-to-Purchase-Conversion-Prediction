@@ -18,7 +18,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, BarChart3, Database, GitBranch, Home, Loader2, Network, Settings2, ShieldAlert, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, BarChart3, Database, Download, GitBranch, Home, Loader2, Network, Settings2, ShieldAlert, SlidersHorizontal } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RainbowButton } from '@/components/ui/rainbow-button'
@@ -162,6 +162,7 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
 function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullLabel: string; value: number }[] }) {
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none')
   const [selectedBin, setSelectedBin] = useState<string | null>(null)
+  const chartRef = useRef<HTMLDivElement>(null)
 
   const sortedData = useMemo(() => {
     if (sortOrder === 'none') return data
@@ -172,22 +173,54 @@ function PriceDistributionChartCard({ data }: { data: { axisLabel: string; fullL
     ? data.reduce((sum, item) => sum + item.value, 0) / data.length
     : 0
 
+  const exportToPng = async () => {
+    if (!chartRef.current) return
+    const svg = chartRef.current.querySelector('svg')
+    if (!svg) return
+    
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const img = new Image()
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    
+    img.onload = () => {
+      canvas.width = img.width * 2
+      canvas.height = img.height * 2
+      ctx?.scale(2, 2)
+      ctx?.drawImage(img, 0, 0)
+      const png = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.download = 'price-distribution.png'
+      link.href = png
+      link.click()
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
+  }
+
   return (
       <Card className="dashboard-card panel-accent">
       <CardHeader className="pb-2">
-          <div className="flex items-center justify-between cursor-pointer" onClick={() => setSortOrder(prev => prev === 'none' ? 'desc' : prev === 'desc' ? 'asc' : 'none')}>
-            <div>
+          <div className="flex items-center justify-between">
+            <div className="cursor-pointer" onClick={() => setSortOrder(prev => prev === 'none' ? 'desc' : prev === 'desc' ? 'asc' : 'none')}>
               <CardTitle className="type-heading text-base">Price Distribution</CardTitle>
               <CardDescription>Price histogram (8 bins)</CardDescription>
             </div>
-            {sortOrder !== 'none' && (
-              <span className="text-xs text-muted-foreground font-medium">
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {sortOrder !== 'none' && (
+                <span className="text-xs text-muted-foreground font-medium">
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
+              <button onClick={exportToPng} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Download PNG">
+                <Download className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </CardHeader>
-      <CardContent>
+      <CardContent ref={chartRef}>
         <ChartMountGate className="h-56">
           {({ width, height }) => (
             <BarChart width={width} height={height} data={sortedData} margin={{ top: 8, right: 14, left: 0, bottom: 28 }} barCategoryGap="18%">
@@ -800,8 +833,8 @@ export function DatasetStatsPage() {
                     </div>
                   </>
                 )}
-              </ChartMountGate>
-            </CardContent>
+          </ChartMountGate>
+      </CardContent>
           </Card>
         </section>
 
