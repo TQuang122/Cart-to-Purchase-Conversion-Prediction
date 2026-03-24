@@ -11,6 +11,7 @@ interface SegmentedButtonItem {
 
 interface SegmentedButtonProps {
   buttons: SegmentedButtonItem[];
+  active?: string;
   defaultActive?: string;
   onChange?: (activeId: string) => void;
   className?: string;
@@ -18,12 +19,13 @@ interface SegmentedButtonProps {
 
 export default function SegmentedButton({
   buttons,
+  active,
   defaultActive,
   onChange,
   className = "",
 }: SegmentedButtonProps) {
   const [activeButton, setActiveButton] = useState(
-    defaultActive || buttons[0]?.id || "",
+    active || defaultActive || buttons[0]?.id || "",
   );
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -42,6 +44,12 @@ export default function SegmentedButton({
       });
     }
   }, [activeButton, buttons]);
+
+  useEffect(() => {
+    if (active && active !== activeButton) {
+      setActiveButton(active);
+    }
+  }, [active, activeButton]);
 
   useEffect(() => {
     if (hoveredIndex !== null) {

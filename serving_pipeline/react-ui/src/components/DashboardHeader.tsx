@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { 
   TrendingUp, 
   Activity, 
@@ -23,6 +23,8 @@ import { AnimatedTooltip } from '@/components/ui/animated-tooltip'
 import { resolveApiRoot } from '@/lib/api'
 import { ANIMATION_DURATION_MS, ANIMATION_STEPS, STATS_FETCH_TIMEOUT_MS, STATS_REFRESH_INTERVAL_MS, THRESHOLD_PRESETS } from '@/lib/thresholdConfig'
 import type { ServingModel } from '@/types/api'
+
+type ThresholdPresetId = 'low' | 'balanced' | 'high'
 
 export interface StatsData {
   total_predictions: number
@@ -79,8 +81,6 @@ export function DashboardHeader({
   const [animatedRate, setAnimatedRate] = useState(0)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
-  const thresholdDebounceRef = useRef<number | null>(null)
-  const THRESHOLD_DEBOUNCE_MS = 300
 
   const fetchStats = useCallback(async (options?: { manual?: boolean }) => {
     const manual = options?.manual ?? false
@@ -205,15 +205,16 @@ export function DashboardHeader({
     return 'High threshold: improves precision, but may miss borderline purchase intent.'
   }, [clampedThreshold])
 
+  const activeThresholdPreset: ThresholdPresetId = useMemo(() => {
+    if (clampedThreshold < THRESHOLD_PRESETS.LOW.max) return 'low'
+    if (clampedThreshold <= THRESHOLD_PRESETS.HIGH.min) return 'balanced'
+    return 'high'
+  }, [clampedThreshold])
+
   const handleThresholdInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (thresholdDebounceRef.current) {
-      window.clearTimeout(thresholdDebounceRef.current)
-    }
-    thresholdDebounceRef.current = window.setTimeout(() => {
-      const nextValue = Number(event.target.value)
-      if (Number.isNaN(nextValue)) return
-      onThresholdChange(Math.min(1, Math.max(0, nextValue)))
-    }, THRESHOLD_DEBOUNCE_MS)
+    const nextValue = Number(event.currentTarget.value)
+    if (Number.isNaN(nextValue)) return
+    onThresholdChange(Math.min(1, Math.max(0, nextValue)))
   }
 
   return (
@@ -279,10 +280,7 @@ export function DashboardHeader({
                       { id: 'balanced', label: 'Balanced' },
                       { id: 'high', label: 'High' },
                     ]}
-                    defaultActive={
-                      clampedThreshold < THRESHOLD_PRESETS.LOW.max ? 'low' :
-                      clampedThreshold > THRESHOLD_PRESETS.HIGH.min ? 'high' : 'balanced'
-                    }
+                    active={activeThresholdPreset}
                     onChange={(id) => {
                       const values = {
                         low: THRESHOLD_PRESETS.LOW.value,
