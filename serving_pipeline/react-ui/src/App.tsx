@@ -268,7 +268,15 @@ function App() {
                   Real-time conversion signals for action-ready decisions.
                 </p>
               </div>
-              <div className="type-caption flex items-center gap-4 text-text-secondary"><span className="flex items-center gap-1"><span className="state-fill-success h-1.5 w-1.5 rounded-full animate-pulse" />Operational</span><span>v1.1.0</span></div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                  Operational
+                </span>
+                <span className="inline-flex items-center rounded-full border border-border/70 bg-surface-2/75 px-2.5 py-1 text-xs font-semibold text-text-primary">
+                  v1.1.0
+                </span>
+              </div>
             </div>
             <div className="mt-3 flex justify-center sm:justify-start">
               <a
