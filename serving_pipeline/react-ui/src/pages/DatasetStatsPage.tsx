@@ -128,9 +128,10 @@ interface MetricTileProps {
   description: string
   tone: 'info' | 'success' | 'warning' | 'error'
   icon: React.ReactNode
+  trend?: 'up' | 'down' | 'neutral'
 }
 
-function MetricTile({ label, value, description, tone, icon }: MetricTileProps) {
+function MetricTile({ label, value, description, tone, icon, trend }: MetricTileProps) {
   const toneClasses = {
     info: 'state-surface-info',
     success: 'state-surface-success',
@@ -145,12 +146,31 @@ function MetricTile({ label, value, description, tone, icon }: MetricTileProps) 
     error: 'state-fill-error',
   }
 
+  const trendColors = {
+    up: 'text-green-600',
+    down: 'text-red-600',
+    neutral: 'text-muted-foreground',
+  }
+
+  const trendIcons = {
+    up: '↑',
+    down: '↓',
+    neutral: '→',
+  }
+
   return (
     <Card className={cn('dashboard-card', toneClasses[tone])}>
       <CardContent className="flex flex-row items-start gap-3 p-4">
         <div className="min-w-0 flex-1">
           <p className="type-kicker">{label}</p>
-          <p className="type-display mt-2 text-2xl">{value}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="type-display mt-2 text-2xl">{value}</p>
+            {trend && (
+              <span className={cn("text-sm font-medium", trendColors[trend])}>
+                {trendIcons[trend]}
+              </span>
+            )}
+          </div>
           <p className="type-body mt-2">{description}</p>
         </div>
         <div className={cn('rounded-lg p-2', iconToneClasses[tone])}>{icon}</div>
