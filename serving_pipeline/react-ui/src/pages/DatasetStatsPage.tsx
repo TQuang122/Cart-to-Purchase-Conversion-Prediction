@@ -9,9 +9,6 @@ import {
   CartesianGrid,
   LabelList,
   Line,
-  Scatter,
-  ScatterChart,
-  ZAxis,
   ReferenceDot,
   ReferenceLine,
   Tooltip,
@@ -564,13 +561,6 @@ export function DatasetStatsPage() {
     share: totalBrandCarts > 0 ? item.carts / totalBrandCarts : 0,
   }))
 
-  const brandEfficiencyScatterData = (conversion?.brand_conversion_rate || []).slice(0, 10).map((item) => ({
-    name: item.brand,
-    carts: item.carts,
-    ratePct: item.conversion_rate * 100,
-    purchases: item.purchases ?? 0,
-  }))
-
   const hourlyPurchaseProbabilityData = [
     { hour: 15, rate: 0.0122 },
     { hour: 16, rate: 0.0113 },
@@ -928,8 +918,8 @@ export function DatasetStatsPage() {
 
         <section id="funnel-brand" className="section-reveal section-delay-3 rounded-2xl border border-border/75 bg-surface-2/70 p-4">
           <div className="mb-4">
-            <h2 className="type-heading text-lg">Conversion Funnel & Brand Efficiency</h2>
-            <p className="type-caption mt-1 text-text-secondary">Compare stage drop-offs and brand-level performance impact.</p>
+            <h2 className="type-heading text-lg">Conversion Funnel</h2>
+            <p className="type-caption mt-1 text-text-secondary">Compare stage drop-offs from views to purchase.</p>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="dashboard-card panel-accent">
@@ -1029,49 +1019,6 @@ export function DatasetStatsPage() {
             />
 
             <PriceDistributionChartCard data={priceDistribution} />
-
-            <Card className="dashboard-card panel-accent">
-              <CardHeader className="pb-2">
-                <CardTitle className="type-heading text-base">Brand Efficiency (Carts vs Conversion)</CardTitle>
-                <CardDescription>Bubble size encodes purchase volume</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartMountGate className="h-56">
-                  {({ width, height }) => (
-                    <ScatterChart width={width} height={height} margin={{ top: 8, right: 16, left: 8, bottom: 6 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.42)" />
-                      <XAxis
-                        type="number"
-                        dataKey="carts"
-                        name="Carts"
-                        tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }}
-                        tickLine={false}
-                        tickFormatter={(value: number) => formatCompactNumber(value)}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="ratePct"
-                        name="Conversion %"
-                        tick={{ fontSize: 11, fill: 'hsl(var(--text-secondary))' }}
-                        tickLine={false}
-                        tickFormatter={(value: number) => `${value.toFixed(1)}%`}
-                      />
-                      <ZAxis type="number" dataKey="purchases" range={[80, 680]} />
-                      <Tooltip
-                        cursor={{ strokeDasharray: '3 3' }}
-                        contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
-                        formatter={(_value: unknown, _name: unknown, payload: { payload?: { name?: string; carts?: number; purchases?: number; ratePct?: number } }) => {
-                          const d = payload?.payload
-                          if (!d) return ['', '']
-                          return [`${d.name} • Carts ${formatNumber(d.carts)} • Purchases ${formatNumber(d.purchases)} • CVR ${d.ratePct?.toFixed(2)}%`, 'Brand']
-                        }}
-                      />
-                      <Scatter data={brandEfficiencyScatterData} fill="hsl(var(--chart-4))" fillOpacity={0.55} stroke="hsl(var(--chart-4))" />
-                    </ScatterChart>
-                  )}
-                </ChartMountGate>
-              </CardContent>
-            </Card>
 
             {/* Horizontal Bar - Category Level 2 */}
             <HorizontalBarChartCard
